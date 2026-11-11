@@ -1,105 +1,56 @@
-# Game website + leaderboard server
+# Top Down Looter: website + backend
 
-Small Node 20 + Express + SQLite server. From the **same origin** it serves:
-
-- the website (`public/index.html`): sign in with Google or an email/password account, then play,
-- the Unity WebGL build (`public/play/`), embedded by the website,
-- the account and leaderboard API.
-
-Leaderboard runs belong to the signed-in **website account**. The session is an HttpOnly
-cookie, so the game's same-origin requests carry it automatically; the game never sees a
-password or token. Without a session, `POST /api/runs` answers `401` and the game keeps
-the run locally.
-
-## Run
+Static website (`public/`) plus a Supabase backend (`supabase/schema.sql`). There is no server
+to run. Players need **no account**: the game registers an anonymous player on first use and
+shows a secret **recovery code** that restores their identity on another device.
 
 ```
-cd Server/leaderboard
-npm install
-npm start            # http://localhost:8080  (PORT env var changes it)
+public/index.html   landing page: game iframe, recovery code panel, leaderboard table
+public/config.js    Supabase URL + PUBLIC key (safe to publish; never the service_role key)
+public/play/        Unity WebGL build (Unity menu: Looter -> Build WebGL Test)
+supabase/schema.sql tables, locked down, plus the RPC functions the game calls
 ```
 
-`leaderboard.sqlite` is created next to `server.js` (`DATABASE_FILE` env var overrides).
+## One-time setup
 
-## Google sign-in (optional)
+1. **Supabase project:** supabase.com -> New project (free). Region near your players.
+2. **Database:** SQL Editor -> paste all of `supabase/schema.sql` -> Run. (Safe to re-run later.)
+3. **Keys:** Project Settings -> API. Copy the **Project URL** and the **anon / publishable** key.
+   Never use the `service_role` / secret key in the game or this repo.
+4. **Game:** put both values in `Assets/Game/Leaderboard/Resources/leaderboard_settings.json`
+   (`supabaseUrl`, `supabaseKey`).
+5. **Site:** put the same two values in `public/config.js`.
+6. **Smoke test** (replace `URL` and `KEY`):
+   ```
+   curl -s URL/rest/v1/rpc/register_player -H "apikey: KEY" -H "Content-Type: application/json" -d '{"p_display_name":"Tester"}'
+   curl -s URL/rest/v1/rpc/get_leaderboard -H "apikey: KEY" -H "Content-Type: application/json" -d '{"p_category":"deepestFloor"}'
+   ```
+   The first returns a `playerKey`; the second returns `{"entries":[]}`. If the key starts with
+   `eyJ` (legacy), also add `-H "Authorization: Bearer KEY"`.
+7. In the Unity editor, press Play with the settings filled in: opening the leaderboard registers a
+   player and finishing a run submits it, so you can test before any web build.
 
-1. Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID → **Web application**.
-2. Add your site under **Authorized JavaScript origins** (e.g. `http://localhost:8080` and `https://yourgame.com`).
-3. Start the server with `GOOGLE_CLIENT_ID=<the client id>`.
+## Publish (Cloudflare Pages, free)
 
-Without `GOOGLE_CLIENT_ID` the Google button is hidden and only email accounts work.
-A Google sign-in never merges into an existing password account with the same email
-(that email was never verified); the player is asked to use their password instead.
+1. Push this repo to GitHub.
+2. Cloudflare dashboard -> Workers & Pages -> Create -> Pages -> connect the repo.
+   Build command: none. **Build output directory: `public`.**
+3. Each push redeploys. Keep the final URL fixed: the browser keeps saves per site address, so
+   changing the address orphans players' local saves (their recovery code still works for runs).
 
-## Quick local test
+Cloudflare Pages allows 25 MiB per file; the gzip'd `.wasm` is about 12 MiB. Check new builds stay under it.
 
-1. In Unity: **Looter → Build WebGL Test** (or the Development variant for logs/profiler).
-   It builds straight into `public/play/` with Gzip, turns on save syncing
-   (`autoSyncPersistentDataPath`) and makes the game fill the site's frame.
-2. Double-click `start-test-site.cmd` (installs packages on first run, starts the server, opens the browser).
+## Update the game
 
-## Host the game (manual build)
+Unity: **Looter -> Build WebGL Test** (writes `public/play/`), then commit and push.
 
-1. In Unity: Build Profiles, WebGL, build to any folder. Brotli/Gzip compression both work (Brotli needs HTTPS).
-   Enable `config.autoSyncPersistentDataPath = true` in the built `index.html`, or saves are lost on reload.
-2. Copy the whole build output (`index.html`, `Build/`, `TemplateData/`) into `Server/leaderboard/public/play/`.
-   Do not copy it into `public/` itself: that would overwrite the website's `index.html`.
-3. Open `http://localhost:8080`, create an account, and the game loads below the account bar.
+## Moderation
 
-`.br` / `.gz` files are served with the right `Content-Encoding` and `Content-Type`.
+Delete a bad score or name in Supabase -> Table Editor (`runs`, `players`). The browser cannot read
+or write those tables directly; only the functions in `schema.sql` are callable.
 
-## Deploy
+## Two modes
 
-Any VPS or Node host: copy this folder, `npm ci --omit=dev`, run `node server.js`
-under pm2/systemd, and put Caddy/nginx in front for HTTPS.
-- Serve over HTTPS: session cookies get the `Secure` flag there, and browsers ignore Brotli (`.br`) builds on plain HTTP.
-- Set `TRUST_PROXY=1` when the server runs behind one proxy (nginx/Caddy/Cloudflare), so the rate limit sees the real client IP and HTTPS is detected for the cookie. Leave it unset when Node is exposed directly.
-- Set `COOKIE_SECURE=1` in production so the session cookie is always `Secure`, even if proxy headers are misconfigured.
-- Sign-in is limited per IP (30 requests/min) and per email (10 failed attempts per 15 min).
-- Back up `leaderboard.sqlite` (it now holds accounts and password hashes too).
-
-The game and the API must share one origin (session cookies are `SameSite=Lax` and
-write endpoints have no CORS). Keep `apiBaseUrl` in
-`Assets/Game/Leaderboard/Resources/leaderboard_settings.json` empty.
-
-## API
-
-Accounts (JSON bodies, `Content-Type: application/json` required on every POST):
-- `GET /api/config` → `{ googleClientId }` (null when Google sign-in is off).
-- `GET /api/auth/me` → `{ accountId, displayName, email }`, or `401` when signed out.
-- `POST /api/auth/register` `{ email, password, displayName }` → account + session cookie. Password 8-128 characters. `409` if the email is taken.
-- `POST /api/auth/login` `{ email, password }` → account + session cookie, `401` on a wrong email or password.
-- `POST /api/auth/google` `{ credential }` (the Google Identity Services ID token) → account + session cookie.
-- `POST /api/auth/logout` → clears the session.
-- `POST /api/account/name` `{ displayName }` → renames the account (the leaderboard name). Signed in only.
-
-Leaderboard:
-- `POST /api/runs` body `{ statistics: {...RunStatistics} }`, signed in only. The player id and name come
-  from the account, never from the body. Numbers are clamped. `201 {ok:true}`, `400` on bad input,
-  `401` when signed out, `429` when rate limited.
-- `GET /api/leaderboard?category=<key>&limit=<1-100>` returns `{ entries: [{ rank, playerId, displayName, value, difficultyTier, submittedAtUtc }] }`.
-  Each player appears once with their best value. Keys: `deepestFloor`, `mostKills`, `mostElitesKilled`, `mostGoldExtracted`, `highestDifficulty`.
-  Public and CORS-open, so other pages can show the boards.
-
-Scores are tier-weighted and runs far below the player's highest unlocked tier are unranked
-(see `TIER_SCORE_WEIGHTS` in `server.js`; keep it in sync with `dungeon_rules.json`).
-
-## Limits
-
-Accounts stop players from posting under someone else's name, but the run numbers are still
-reported by the client; clamping only stops absurd values. Real protection
-(server-authoritative runs) belongs to the later Nakama step.
-The rate limit is in memory and resets on restart. Runs submitted before accounts existed
-keep their old random player ids.
-
-## Deploy with Docker
-
-The folder has a `Dockerfile` (database on the `/data` volume) and a `docker-compose.yml`
-that adds Caddy for automatic HTTPS.
-
-- **Any VM (e.g. Oracle Cloud Always Free, a cheap VPS):** install Docker, point a DNS record at the
-  VM, copy `.env.example` to `.env` (set `DOMAIN`), then `docker compose up -d --build`.
-- **Container hosts (Render, Fly.io, Railway):** deploy the `Dockerfile`, mount a persistent disk
-  at `/data`, and set `TRUST_PROXY=1` and `COOKIE_SECURE=1`. Without a persistent disk the
-  accounts and leaderboard reset on every redeploy.
-- Update the game: build in Unity (**Looter -> Build WebGL Test**), commit `public/play`, redeploy.
+`runs.mode` already supports `normal` and `roguelike`; the leaderboard function takes a mode, and the
+site has a mode selector. The game still sends `normal` until the roguelike mode exists
+(see `WebLeaderboardService.NormalModeName`).
