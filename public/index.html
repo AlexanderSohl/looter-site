@@ -51,7 +51,7 @@
     <section class="card" aria-label="Game">
       <iframe id="game-frame" class="game-frame" src="play/index.html" title="Top Down Looter" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
       <div class="row spread" style="margin-top:10px">
-        <span class="note" style="color:var(--muted);font-size:.9rem">No account needed. The recovery code below carries your leaderboard name and scores to another device. Game saves (stash, progress) stay in this browser for now; cross-device saves are not built yet.</span>
+        <span class="note" style="color:var(--muted);font-size:.9rem">No account needed. The recovery code below carries your leaderboard name, scores and game save (stash, progress) to another device. Your save is backed up online a few seconds after each change.</span>
         <button id="fullscreen-button" type="button">Fullscreen</button>
       </div>
     </section>
@@ -180,7 +180,7 @@
       }
       var currentCode = normalizeCode(readStorage());
       if (currentCode && currentCode !== code &&
-          !window.confirm('This browser already has a different player. Replacing it means you can only get that player back with its own recovery code. Continue?')) {
+          !window.confirm('This browser already has a different player. Restoring replaces that player AND this browser\'s game save with the restored one. You can only get the old player back with its own recovery code. Continue?')) {
         return;
       }
       status.className = 'status';
