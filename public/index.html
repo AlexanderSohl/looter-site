@@ -206,6 +206,23 @@
       });
     });
 
+    // Size the game frame in whole, multiple-of-8 pixels. A fractional CSS size makes the browser
+    // resample the canvas, which is what makes text look fuzzy. (CSS aspect-ratio stays as the fallback.)
+    var FRAME_RESERVED_HEIGHT = 150;
+    var FRAME_SNAP_PIXELS = 16;   // 16 keeps width * 9 / 16 a whole number too
+    function sizeGameFrame() {
+      var frame = byId('game-frame');
+      if (document.fullscreenElement) { return; }
+      var availableWidth = frame.parentElement.clientWidth - 32;
+      var availableHeight = window.innerHeight - FRAME_RESERVED_HEIGHT;
+      var width = Math.min(availableWidth, availableHeight * 16 / 9);
+      width = Math.max(FRAME_SNAP_PIXELS * 20, Math.floor(width / FRAME_SNAP_PIXELS) * FRAME_SNAP_PIXELS);
+      frame.style.width = width + 'px';
+      frame.style.height = Math.round(width * 9 / 16) + 'px';
+    }
+    window.addEventListener('resize', sizeGameFrame);
+    sizeGameFrame();
+
     byId('fullscreen-button').addEventListener('click', function () {
       var frame = byId('game-frame');
       if (frame.requestFullscreen) { frame.requestFullscreen(); }
