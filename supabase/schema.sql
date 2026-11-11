@@ -1,14 +1,17 @@
 -- ============================================================
--- Top Down Looter: Supabase backend (no accounts).
+-- Top Down Looter: Supabase backend (name + password accounts).
 --
--- Paste this whole file into Supabase -> SQL Editor -> Run. Safe to re-run.
+-- Paste this whole file into Supabase -> SQL Editor -> Run. Safe to re-run (it never deletes data).
+-- The ONE-TIME wipe lives in migration_accounts.sql, which must be run BEFORE this file the first time.
 --
 -- How identity works:
---   * A player registers once and gets a secret RECOVERY CODE (20 hex chars).
---     Only its SHA-256 hash is stored. The code is the only thing that proves
---     "this is me", on this device or any other.
---   * Boards show a separate public player_id (uuid), never the secret code.
---   * The game talks only to the RPC functions below, using the public anon key.
+--   * A player creates an account on the website with a name and a password. The password is stored only
+--     as a bcrypt hash; the name is the login and is unique ignoring case.
+--   * Logging in returns a random SESSION TOKEN. Only its SHA-256 hash is stored (private.sessions); the
+--     browser keeps the token in localStorage and the game sends it with every call. One account can be
+--     logged in on several devices at once.
+--   * Boards show a separate public player_id (uuid), never the token or the password.
+--   * The game and site talk only to the RPC functions below, using the public anon key.
 --     The tables are locked: no direct reads or writes from the browser.
 -- ============================================================
 
@@ -18,13 +21,13 @@ create extension if not exists pgcrypto with schema extensions;
 -- ---------- Tables ----------
 
 create table if not exists public.players (
-  player_id    uuid primary key default gen_random_uuid(),
-  key_hash     bytea not null unique,
-  display_name text  not null,
-  created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
+  player_id     uuid primary key default gen_random_uuid(),
+  password_hash text not null,
+  display_name  text not null,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
 );
--- Names are unique ignoring case, so nobody can pose as another player.
+-- Names are unique ignoring case, so nobody can pose as another player (and login is by name).
 create unique index if not exists players_display_name_lower_index on public.players (lower(display_name));
 
 create table if not exists public.runs (
@@ -54,19 +57,33 @@ create table if not exists public.saves (
   updated_at    timestamptz not null default now()
 );
 
-create table if not exists private.registration_log (
-  ip_hash    bytea not null,
+-- Logged-in devices. The token itself is never stored, only its hash.
+create table if not exists private.sessions (
+  token_hash bytea primary key,
+  player_id  uuid not null references public.players (player_id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '180 days'
+);
+create index if not exists sessions_player_index on private.sessions (player_id, created_at);
+
+-- Registrations and failed logins, for rate limiting. name_key is the lower-cased name that was tried.
+create table if not exists private.auth_log (
+  kind       text not null,
+  ip_hash    bytea,
+  name_key   text,
   created_at timestamptz not null default now()
 );
-create index if not exists registration_log_index on private.registration_log (ip_hash, created_at);
+create index if not exists auth_log_ip_index on private.auth_log (kind, ip_hash, created_at);
+create index if not exists auth_log_name_index on private.auth_log (kind, name_key, created_at);
 
 -- Lock every table: RLS on with no policies = nothing readable through the API.
 alter table public.players enable row level security;
 alter table public.runs enable row level security;
 alter table public.saves enable row level security;
-alter table private.registration_log enable row level security;
+alter table private.sessions enable row level security;
+alter table private.auth_log enable row level security;
 revoke all on public.players, public.runs, public.saves from anon, authenticated;
-revoke all on private.registration_log from anon, authenticated;
+revoke all on private.sessions, private.auth_log from anon, authenticated;
 revoke all on schema private from anon, authenticated, public;
 
 -- ---------- Helpers (not callable from the API) ----------
@@ -103,7 +120,8 @@ as $$
 declare
   v_player_id uuid;
 begin
-  select player_id into v_player_id from public.players where key_hash = private.hash_key(p_key);
+  select player_id into v_player_id from private.sessions
+   where token_hash = private.hash_key(p_key) and expires_at > now();
   if v_player_id is null then
     raise exception 'invalid_key';
   end if;
@@ -119,64 +137,130 @@ as $$
   select btrim(left(btrim(regexp_replace(coalesce(p_name, ''), '[^[:alnum:] _-]', '', 'g')), 16));
 $$;
 
--- ---------- Public API (RPC) ----------
-
--- Creates a player and returns the one-time recovery code. TODO(UI): the game/site must show it.
-create or replace function public.register_player(p_display_name text default '')
-returns json
-language plpgsql volatile security definer set search_path = ''
+-- The caller's IP (hashed), or null when the request carries none.
+create or replace function private.caller_ip_hash()
+returns bytea
+language plpgsql stable set search_path = ''
 as $$
 declare
   v_headers json := coalesce(nullif(current_setting('request.headers', true), ''), '{}')::json;
   v_ip text := btrim(split_part(coalesce(v_headers ->> 'cf-connecting-ip', v_headers ->> 'x-forwarded-for', ''), ',', 1));
-  v_ip_hash bytea;
-  v_max_per_ip_per_hour constant integer := 10;
-  v_key text := upper(encode(extensions.gen_random_bytes(10), 'hex'));
-  v_name text := private.clean_name(p_display_name);
-  v_player_id uuid;
-  v_attempt integer := 0;
 begin
-  if v_ip <> '' then
-    v_ip_hash := extensions.digest(v_ip, 'sha256');
-    delete from private.registration_log where created_at < now() - interval '1 day';
-    if (select count(*) from private.registration_log where ip_hash = v_ip_hash and created_at > now() - interval '1 hour') >= v_max_per_ip_per_hour then
-      raise exception 'rate_limited';
-    end if;
-    insert into private.registration_log (ip_hash) values (v_ip_hash);
+  if v_ip = '' then
+    return null;
   end if;
-
-  loop
-    v_attempt := v_attempt + 1;
-    if v_name = '' then
-      v_name := 'Player' || lpad(floor(random() * 10000)::integer::text, 4, '0');
-    end if;
-    begin
-      insert into public.players (key_hash, display_name)
-      values (private.hash_key(v_key), v_name)
-      returning player_id into v_player_id;
-      exit;
-    exception when unique_violation then
-      -- A chosen name that is taken is an error; a generated one just retries.
-      if btrim(coalesce(p_display_name, '')) <> '' or v_attempt >= 5 then
-        raise exception 'name_taken';
-      end if;
-      v_name := '';
-    end;
-  end loop;
-
-  return json_build_object('playerKey', v_key, 'playerId', v_player_id, 'displayName', v_name);
+  return extensions.digest(v_ip, 'sha256');
 end;
 $$;
 
--- Restores a player on a new device from the recovery code.
-create or replace function public.recover_player(p_player_key text)
+-- Starts a login session for a player and returns the new token (shown to the browser exactly once).
+create or replace function private.start_session(p_player_id uuid)
+returns text
+language plpgsql volatile set search_path = ''
+as $$
+declare
+  v_token text := encode(extensions.gen_random_bytes(32), 'hex');
+begin
+  insert into private.sessions (token_hash, player_id) values (private.hash_key(v_token), p_player_id);
+  -- Keep only the 10 newest devices per account.
+  delete from private.sessions
+   where player_id = p_player_id
+     and token_hash not in (select token_hash from private.sessions where player_id = p_player_id order by created_at desc limit 10);
+  return v_token;
+end;
+$$;
+
+-- ---------- Public API (RPC) ----------
+
+-- Creates an account and logs it in. Errors: invalid_name, invalid_password, name_taken, rate_limited.
+create or replace function public.register_account(p_display_name text, p_password text)
+returns json
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_ip_hash bytea := private.caller_ip_hash();
+  v_max_per_ip_per_hour constant integer := 10;
+  v_name text := private.clean_name(p_display_name);
+  v_player_id uuid;
+begin
+  if char_length(v_name) < 3 then
+    raise exception 'invalid_name';
+  end if;
+  -- bcrypt only looks at the first 72 bytes, so longer passwords are refused instead of silently cut.
+  if p_password is null or char_length(p_password) < 8 or octet_length(p_password) > 72 then
+    raise exception 'invalid_password';
+  end if;
+
+  if v_ip_hash is not null then
+    delete from private.auth_log where created_at < now() - interval '1 day';
+    if (select count(*) from private.auth_log where kind = 'register' and ip_hash = v_ip_hash and created_at > now() - interval '1 hour') >= v_max_per_ip_per_hour then
+      raise exception 'rate_limited';
+    end if;
+    insert into private.auth_log (kind, ip_hash) values ('register', v_ip_hash);
+  end if;
+
+  begin
+    insert into public.players (password_hash, display_name)
+    values (extensions.crypt(p_password, extensions.gen_salt('bf', 10)), v_name)
+    returning player_id into v_player_id;
+  exception when unique_violation then
+    raise exception 'name_taken';
+  end;
+
+  return json_build_object('token', private.start_session(v_player_id), 'playerId', v_player_id, 'displayName', v_name);
+end;
+$$;
+
+-- Logs in with name + password. A wrong name or password RETURNS {"error":"invalid_login"} instead of raising, because a
+-- raised error would roll back the failed-attempt record that the rate limit needs. Raises too_many_attempts at the limits.
+create or replace function public.login(p_display_name text, p_password text)
+returns json
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_ip_hash bytea := private.caller_ip_hash();
+  v_name_key text := lower(private.clean_name(p_display_name));
+  v_max_failures_per_name constant integer := 10;
+  v_max_failures_per_ip constant integer := 30;
+  v_player public.players;
+  v_is_valid boolean;
+begin
+  delete from private.auth_log where created_at < now() - interval '1 day';
+  if (select count(*) from private.auth_log where kind = 'login_failed' and name_key = v_name_key and created_at > now() - interval '15 minutes') >= v_max_failures_per_name
+     or (v_ip_hash is not null and (select count(*) from private.auth_log where kind = 'login_failed' and ip_hash = v_ip_hash and created_at > now() - interval '15 minutes') >= v_max_failures_per_ip) then
+    raise exception 'too_many_attempts';
+  end if;
+
+  select * into v_player from public.players where lower(display_name) = v_name_key;
+  if v_player.player_id is null then
+    -- Spend the same time as a real check so response time does not reveal which names exist.
+    perform extensions.crypt(coalesce(p_password, ''), extensions.gen_salt('bf', 10));
+    v_is_valid := false;
+  else
+    v_is_valid := v_player.password_hash = extensions.crypt(coalesce(p_password, ''), v_player.password_hash);
+  end if;
+
+  if not v_is_valid then
+    insert into private.auth_log (kind, ip_hash, name_key) values ('login_failed', v_ip_hash, v_name_key);
+    return json_build_object('error', 'invalid_login');
+  end if;
+
+  delete from private.auth_log where kind = 'login_failed' and name_key = v_name_key;
+  return json_build_object('token', private.start_session(v_player.player_id), 'playerId', v_player.player_id, 'displayName', v_player.display_name);
+end;
+$$;
+
+-- Who is this token? (Used by the game and the site at startup.) Raises invalid_key when it expired or was logged out.
+create or replace function public.get_account(p_player_key text)
 returns json
 language plpgsql stable security definer set search_path = ''
 as $$
 declare
   v_player public.players;
 begin
-  select * into v_player from public.players where key_hash = private.hash_key(p_player_key);
+  select p.* into v_player
+    from private.sessions s join public.players p on p.player_id = s.player_id
+   where s.token_hash = private.hash_key(p_player_key) and s.expires_at > now();
   if v_player.player_id is null then
     raise exception 'invalid_key';
   end if;
@@ -184,23 +268,38 @@ begin
 end;
 $$;
 
-create or replace function public.set_display_name(p_player_key text, p_display_name text)
+-- Ends this device's session.
+create or replace function public.logout(p_player_key text)
+returns json
+language plpgsql volatile security definer set search_path = ''
+as $$
+begin
+  delete from private.sessions where token_hash = private.hash_key(p_player_key);
+  return json_build_object('ok', true);
+end;
+$$;
+
+-- Changes the password and logs every OTHER device out. A wrong old password RETURNS {"error":"invalid_login"}.
+create or replace function public.change_password(p_player_key text, p_old_password text, p_new_password text)
 returns json
 language plpgsql volatile security definer set search_path = ''
 as $$
 declare
   v_player_id uuid := private.require_player(p_player_key);
-  v_name text := private.clean_name(p_display_name);
+  v_current_hash text;
 begin
-  if v_name = '' then
-    raise exception 'invalid_name';
+  if p_new_password is null or char_length(p_new_password) < 8 or octet_length(p_new_password) > 72 then
+    raise exception 'invalid_password';
   end if;
-  begin
-    update public.players set display_name = v_name, updated_at = now() where player_id = v_player_id;
-  exception when unique_violation then
-    raise exception 'name_taken';
-  end;
-  return json_build_object('playerId', v_player_id, 'displayName', v_name);
+  select password_hash into v_current_hash from public.players where player_id = v_player_id;
+  if v_current_hash <> extensions.crypt(coalesce(p_old_password, ''), v_current_hash) then
+    return json_build_object('error', 'invalid_login');
+  end if;
+  update public.players
+     set password_hash = extensions.crypt(p_new_password, extensions.gen_salt('bf', 10)), updated_at = now()
+   where player_id = v_player_id;
+  delete from private.sessions where player_id = v_player_id and token_hash <> private.hash_key(p_player_key);
+  return json_build_object('ok', true);
 end;
 $$;
 
@@ -353,9 +452,11 @@ $$;
 revoke execute on all functions in schema public from public, anon, authenticated;
 revoke execute on all functions in schema private from public, anon, authenticated;
 
-grant execute on function public.register_player(text) to anon, authenticated;
-grant execute on function public.recover_player(text) to anon, authenticated;
-grant execute on function public.set_display_name(text, text) to anon, authenticated;
+grant execute on function public.register_account(text, text) to anon, authenticated;
+grant execute on function public.login(text, text) to anon, authenticated;
+grant execute on function public.get_account(text) to anon, authenticated;
+grant execute on function public.logout(text) to anon, authenticated;
+grant execute on function public.change_password(text, text, text) to anon, authenticated;
 grant execute on function public.submit_run(text, text, integer, integer, integer, integer, integer, integer, double precision, boolean, boolean) to anon, authenticated;
 grant execute on function public.get_leaderboard(text, integer, text) to anon, authenticated;
 grant execute on function public.save_cloud(text, text, text, text) to anon, authenticated;

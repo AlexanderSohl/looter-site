@@ -1,17 +1,29 @@
 # Top Down Looter: website + backend
 
-Static website (`public/`) plus a Supabase backend (`supabase/schema.sql`). There is no server
-to run. Players need **no account**: the game registers an anonymous player on first use and
-shows a secret **recovery code** that restores their identity on another device.
+Static website (`public/`) plus a Supabase backend (`supabase/`). There is no server to run.
+Players can play with **no account**. To save progress online and post scores they make a **name + password
+account on the website**; the page stores a login token that the game reads. There are no recovery codes.
 
 ```
-public/index.html   landing page: game iframe, recovery code panel, leaderboard table
-public/config.js    Supabase URL + PUBLIC key (safe to publish; never the service_role key)
-public/play/        Unity WebGL build (Unity menu: Looter -> Build WebGL Test)
-supabase/schema.sql tables, locked down, plus the RPC functions the game calls
+public/index.html           landing page: game iframe, account panel (log in / create / log out), leaderboard table
+public/config.js            Supabase URL + PUBLIC key (safe to publish; never the service_role key)
+public/play/                Unity WebGL build (Unity menu: Looter -> Build WebGL Test)
+supabase/schema.sql         tables, locked down, plus the RPC functions the game and site call (safe to re-run)
+supabase/migration_accounts.sql  ONE-TIME wipe + switch from recovery codes to accounts (deletes all data)
 ```
 
-## One-time setup
+## How accounts work
+
+- `register_account(name, password)` / `login(name, password)` return a random session token. Passwords are stored
+  only as bcrypt hashes; tokens only as SHA-256 hashes (`private.sessions`). Several devices can be logged in at once.
+- The site keeps the token in `localStorage` under `looter_session`. The Unity game reads the same key
+  (`PlayerKeyStore`), asks `get_account` who it is, and sends the token with `submit_run`, `save_cloud`, `load_cloud`.
+- Logged out (no token, or an expired one) the game plays locally and sends nothing online. It never creates accounts.
+- Wrong logins are rate limited (10 failures / 15 min per name, 30 per IP). Account creation: 10 per IP per hour.
+- No password recovery yet. To reset a forgotten password, delete that row's sessions and set a new `password_hash`
+  by hand in the Supabase SQL editor (`update public.players set password_hash = extensions.crypt('new', extensions.gen_salt('bf', 10)) where lower(display_name) = 'name';`).
+
+## One-time setup (new project)
 
 1. **Supabase project:** supabase.com -> New project (free). Region near your players.
 2. **Database:** SQL Editor -> paste all of `supabase/schema.sql` -> Run. (Safe to re-run later.)
@@ -20,29 +32,36 @@ supabase/schema.sql tables, locked down, plus the RPC functions the game calls
 4. **Game:** put both values in `Assets/Game/Leaderboard/Resources/leaderboard_settings.json`
    (`supabaseUrl`, `supabaseKey`).
 5. **Site:** put the same two values in `public/config.js`.
-6. **Smoke test** (run in Git Bash; replace `URL` and `KEY`). If a call says "Could not find the
-   function", run `notify pgrst, 'reload schema';` in the SQL editor and retry:
+6. **Smoke test** (Git Bash; replace `URL` and `KEY`). If a call says "Could not find the function", run
+   `notify pgrst, 'reload schema';` in the SQL editor and retry:
    ```
-   curl -s URL/rest/v1/rpc/register_player -H "apikey: KEY" -H "Content-Type: application/json" -d '{"p_display_name":"Tester"}'
    curl -s URL/rest/v1/rpc/get_leaderboard -H "apikey: KEY" -H "Content-Type: application/json" -d '{"p_category":"deepestFloor"}'
+   curl -s URL/rest/v1/rpc/login -H "apikey: KEY" -H "Content-Type: application/json" -d '{"p_display_name":"nobody","p_password":"wrong-password"}'
    ```
-   The first returns a `playerKey`; the second returns `{"entries":[]}`. If the key starts with
-   `eyJ` (legacy), also add `-H "Authorization: Bearer KEY"`.
-7. In the Unity editor, press Play with the settings filled in: opening the leaderboard registers a
-   player and finishing a run submits it, so you can test before any web build.
+   The first returns `{"entries":[]}`; the second returns `{"error":"invalid_login"}`. If the key starts with
+   `eyJ` (legacy), also add `-H "Authorization: Bearer KEY"`. Avoid creating test accounts on the live project.
+
+## Switching an existing project from recovery codes to accounts (wipes all data)
+
+Run in the Supabase SQL editor, in this order:
+1. `supabase/migration_accounts.sql`  (DELETES every player, run and cloud save)
+2. `supabase/schema.sql`
+3. `notify pgrst, 'reload schema';`
+
+Then deploy the new WebGL build and `public/` **together in one commit** (the old build calls functions that no
+longer exist). Local saves are reset by the game itself: `SaveSeason.CurrentSeason` in `Assets/Game/Leaderboard`
+discards older local saves once per browser. Raise that number whenever you want another global reset.
 
 ## Publish (Cloudflare Pages, free)
 
 **Order matters.** `leaderboard_settings.json` is baked into the Unity build, so fill in the Supabase
-URL and key (step 4) first, then run **Looter -> Build WebGL Test**, and only then commit and connect
-Cloudflare. The `public/play` currently committed is an old build (old `/api` client, no decompression
-fallback) and must be replaced by a fresh build before the site will work.
+URL and key first, then run **Looter -> Build WebGL Test**, and only then commit.
 
 1. Push this repo to GitHub.
 2. Cloudflare dashboard -> Workers & Pages -> Create -> Pages -> connect the repo.
    Build command: none. **Build output directory: `public`.**
-3. Each push redeploys. Keep the final URL fixed: the browser keeps saves per site address, so
-   changing the address orphans players' local saves (their recovery code still works for runs).
+3. Each push redeploys. Keep the final URL fixed: the browser keeps saves and logins per site address, so
+   changing the address orphans players' local saves and logins.
 
 Cloudflare Pages allows 25 MiB per file; the gzip'd `.wasm` is about 12 MiB. Check new builds stay under it.
 
@@ -57,6 +76,5 @@ or write those tables directly; only the functions in `schema.sql` are callable.
 
 ## Two modes
 
-`runs.mode` already supports `normal` and `roguelike`; the leaderboard function takes a mode, and the
-site has a mode selector. The game still sends `normal` until the roguelike mode exists
-(see `WebLeaderboardService.NormalModeName`).
+`runs.mode` supports `normal` and `roguelike`; the leaderboard function takes a mode, and the site has a mode
+selector. The game sends the mode of each run (`GameModeNames`).
