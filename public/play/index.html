@@ -83,6 +83,7 @@
       // directory to automatically persist so that the contents are remembered when
       // the user revisits the site the next time, uncomment the following line:
       config.autoSyncPersistentDataPath = true; // enabled by WebGLTestBuild
+      config.devicePixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 2), 3); // sharper text (WebGLTestBuild)
       // This autosyncing is currently not the default behavior to avoid regressing
       // existing user projects that might rely on the earlier manual
       // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
