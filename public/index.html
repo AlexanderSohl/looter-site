@@ -51,7 +51,7 @@
     <section class="card" aria-label="Game">
       <iframe id="game-frame" class="game-frame" src="play/index.html" title="Top Down Looter" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
       <div class="row spread" style="margin-top:10px">
-        <span class="note" style="color:var(--muted);font-size:.9rem">No account needed. Your save and runs stay in this browser; use the recovery code below to move them.</span>
+        <span class="note" style="color:var(--muted);font-size:.9rem">No account needed. The recovery code below carries your leaderboard name and scores to another device. Game saves (stash, progress) stay in this browser for now; cross-device saves are not built yet.</span>
         <button id="fullscreen-button" type="button">Fullscreen</button>
       </div>
     </section>
@@ -133,6 +133,22 @@
       return groups.join('-');
     }
 
+    // Calls a Supabase SQL function. Rejects with Error(message): the database's short code
+    // (e.g. "invalid_key") for server errors, or "network" when the server cannot be reached.
+    function callRpc(functionName, body) {
+      if (!config.supabaseUrl || !config.supabaseKey) { return Promise.reject(new Error('not_configured')); }
+      var headers = { 'Content-Type': 'application/json', 'apikey': config.supabaseKey };
+      if (config.supabaseKey.indexOf('eyJ') === 0) { headers['Authorization'] = 'Bearer ' + config.supabaseKey; }
+      return fetch(config.supabaseUrl.replace(/\/+$/, '') + '/rest/v1/rpc/' + functionName, {
+        method: 'POST', headers: headers, body: JSON.stringify(body)
+      }).then(function (response) {
+        return response.json().then(function (data) {
+          if (!response.ok) { throw new Error((data && data.message) || 'http_' + response.status); }
+          return data;
+        });
+      }, function () { throw new Error('network'); });
+    }
+
     // ---------- Recovery code panel ----------
     var shownCode = null;
     function refreshRecoveryPanel() {
@@ -162,17 +178,32 @@
         status.textContent = 'A recovery code has 20 letters and numbers (0-9, A-F).';
         return;
       }
-      if (!writeStorage(code)) {
-        status.className = 'status bad';
-        status.textContent = 'This browser blocked storage, so the code cannot be saved here.';
+      var currentCode = normalizeCode(readStorage());
+      if (currentCode && currentCode !== code &&
+          !window.confirm('This browser already has a different player. Replacing it means you can only get that player back with its own recovery code. Continue?')) {
         return;
       }
-      // Reload the game so it picks the code up and re-checks it with the server.
-      byId('game-frame').src = byId('game-frame').src;
-      status.className = 'status good';
-      status.textContent = 'Restored. The game reloads with your identity.';
-      byId('restore-input').value = '';
-      refreshRecoveryPanel();
+      status.className = 'status';
+      status.textContent = 'Checking the code...';
+      // Ask the server first: a typo must never replace a working identity.
+      callRpc('recover_player', { p_player_key: code }).then(function (player) {
+        if (!writeStorage(code)) {
+          status.className = 'status bad';
+          status.textContent = 'This browser blocked storage, so the code cannot be saved here.';
+          return;
+        }
+        // Reload the game so it picks the code up.
+        byId('game-frame').src = byId('game-frame').src;
+        status.className = 'status good';
+        status.textContent = 'Restored as ' + player.displayName + '. The game reloads with your identity.';
+        byId('restore-input').value = '';
+        refreshRecoveryPanel();
+      }).catch(function (error) {
+        status.className = 'status bad';
+        status.textContent = error && error.message === 'invalid_key'
+          ? 'That code was not found. Check it for typos.'
+          : 'Could not reach the server. Try again in a moment.';
+      });
     });
 
     byId('fullscreen-button').addEventListener('click', function () {

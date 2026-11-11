@@ -20,7 +20,8 @@ supabase/schema.sql tables, locked down, plus the RPC functions the game calls
 4. **Game:** put both values in `Assets/Game/Leaderboard/Resources/leaderboard_settings.json`
    (`supabaseUrl`, `supabaseKey`).
 5. **Site:** put the same two values in `public/config.js`.
-6. **Smoke test** (replace `URL` and `KEY`):
+6. **Smoke test** (run in Git Bash; replace `URL` and `KEY`). If a call says "Could not find the
+   function", run `notify pgrst, 'reload schema';` in the SQL editor and retry:
    ```
    curl -s URL/rest/v1/rpc/register_player -H "apikey: KEY" -H "Content-Type: application/json" -d '{"p_display_name":"Tester"}'
    curl -s URL/rest/v1/rpc/get_leaderboard -H "apikey: KEY" -H "Content-Type: application/json" -d '{"p_category":"deepestFloor"}'
@@ -31,6 +32,11 @@ supabase/schema.sql tables, locked down, plus the RPC functions the game calls
    player and finishing a run submits it, so you can test before any web build.
 
 ## Publish (Cloudflare Pages, free)
+
+**Order matters.** `leaderboard_settings.json` is baked into the Unity build, so fill in the Supabase
+URL and key (step 4) first, then run **Looter -> Build WebGL Test**, and only then commit and connect
+Cloudflare. The `public/play` currently committed is an old build (old `/api` client, no decompression
+fallback) and must be replaced by a fresh build before the site will work.
 
 1. Push this repo to GitHub.
 2. Cloudflare dashboard -> Workers & Pages -> Create -> Pages -> connect the repo.
