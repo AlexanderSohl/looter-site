@@ -1,0 +1,21 @@
+{
+  "name": "looter-leaderboard",
+  "version": "1.0.0",
+  "description": "Reference leaderboard API + static host for the Top Down Looter WebGL build",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "express": "^4.21.0",
+    "google-auth-library": "^9.14.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true
+  }
+}

@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Top Down Looter</title>
+<!-- Site shell: sign in (email or Google), then play the WebGL build from /play/.
+     The session is an HttpOnly cookie, so the game's leaderboard requests are signed in automatically. -->
+<style>
+  :root {
+    --background: #121016;
+    --panel: #1d1a24;
+    --panel-edge: #2e2a38;
+    --text: #ece6f5;
+    --muted: #9b93ab;
+    --gold: #f2c14e;
+    --bad: #ff6b6b;
+    --button-text: #1a1408;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--background);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--panel-edge);
+  }
+  header h1 { margin: 0; font-size: 20px; color: var(--gold); letter-spacing: 0.04em; }
+  #account-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  main { padding: 24px 16px; display: flex; justify-content: center; }
+  .card {
+    width: 100%;
+    max-width: 380px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tabs button { flex: 1; background: transparent; color: var(--muted); border: 1px solid var(--panel-edge); }
+  .tabs button[aria-selected="true"] { color: var(--text); border-color: var(--gold); }
+  label { display: block; font-size: 14px; color: var(--muted); margin: 12px 0 4px; }
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-edge);
+    background: var(--background);
+    color: var(--text);
+    font: inherit;
+  }
+  button {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: none;
+    background: var(--gold);
+    color: var(--button-text);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.quiet { background: transparent; color: var(--muted); border: 1px solid var(--panel-edge); font-weight: 400; }
+  form button[type="submit"] { width: 100%; margin-top: 18px; }
+  .divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; margin: 20px 0; }
+  .divider::before, .divider::after { content: ""; flex: 1; border-top: 1px solid var(--panel-edge); }
+  #google-button { display: flex; justify-content: center; min-height: 44px; }
+  .error { color: var(--bad); font-size: 14px; min-height: 21px; margin: 10px 0 0; }
+  .hidden { display: none !important; }
+  /* As big as the window allows at 16:9 (header + padding + footer line take ~150px).
+     A bigger frame means more real pixels: a small frame makes the game look soft. */
+  #game-area { width: min(100%, calc((100vh - 150px) * 16 / 9)); }
+  #game-frame {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 1px solid var(--panel-edge);
+    border-radius: 8px;
+    background: #000;
+  }
+  #name-form { display: flex; gap: 8px; align-items: center; }
+  #name-form input { width: 150px; padding: 6px 10px; }
+  #name-form button { padding: 6px 10px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .game-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .game-footer button { padding: 6px 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>TOP DOWN LOOTER</h1>
+  <div id="account-bar" class="hidden">
+    <form id="name-form">
+      <span class="muted">Name</span>
+      <input id="name-input" maxlength="16" autocomplete="nickname" aria-label="Leaderboard name">
+      <button type="submit" class="quiet">Save</button>
+    </form>
+    <button id="sign-out" class="quiet" type="button">Sign out</button>
+  </div>
+</header>
+
+<main>
+  <section id="auth-card" class="card hidden">
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-sign-in" aria-selected="true">Sign in</button>
+      <button type="button" role="tab" id="tab-register" aria-selected="false">Create account</button>
+    </div>
+    <form id="auth-form" novalidate>
+      <div id="name-field" class="hidden">
+        <label for="register-name">Leaderboard name</label>
+        <input id="register-name" maxlength="16" autocomplete="nickname">
+      </div>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email" required>
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" minlength="8" required>
+      <button type="submit" id="auth-submit">Sign in</button>
+      <p class="error" id="auth-error" role="alert"></p>
+    </form>
+    <div id="google-area" class="hidden">
+      <div class="divider">or</div>
+      <div id="google-button"></div>
+    </div>
+  </section>
+
+  <section id="game-area" class="hidden">
+    <iframe id="game-frame" title="Top Down Looter" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
+    <div class="game-footer">
+      <p class="muted">Your runs are posted to the leaderboard under your account name.</p>
+      <button type="button" class="quiet" id="fullscreen">Fullscreen</button>
+    </div>
+  </section>
+</main>
+
+<script>
+'use strict';
+// Path of the Unity WebGL build (copy the build output into public/play/).
+const GAME_PATH = '/play/index.html';
+const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Try again.';
+
+const elements = {
+  authCard: document.getElementById('auth-card'),
+  authForm: document.getElementById('auth-form'),
+  authSubmit: document.getElementById('auth-submit'),
+  authError: document.getElementById('auth-error'),
+  tabSignIn: document.getElementById('tab-sign-in'),
+  tabRegister: document.getElementById('tab-register'),
+  nameField: document.getElementById('name-field'),
+  registerName: document.getElementById('register-name'),
+  email: document.getElementById('email'),
+  password: document.getElementById('password'),
+  googleArea: document.getElementById('google-area'),
+  googleButton: document.getElementById('google-button'),
+  accountBar: document.getElementById('account-bar'),
+  nameForm: document.getElementById('name-form'),
+  nameInput: document.getElementById('name-input'),
+  signOut: document.getElementById('sign-out'),
+  gameArea: document.getElementById('game-area'),
+  gameFrame: document.getElementById('game-frame'),
+  fullscreen: document.getElementById('fullscreen'),
+};
+
+let isRegistering = false;
+
+async function callApi(method, url, body) {
+  const options = { method, credentials: 'same-origin', headers: {} };
+  if (body !== undefined) {
+    options.headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(url, options);
+  let data = {};
+  try { data = await response.json(); } catch (error) { data = {}; }
+  return { ok: response.ok, status: response.status, data };
+}
+
+function setMode(registering) {
+  isRegistering = registering;
+  elements.tabSignIn.setAttribute('aria-selected', String(!registering));
+  elements.tabRegister.setAttribute('aria-selected', String(registering));
+  elements.nameField.classList.toggle('hidden', !registering);
+  elements.authSubmit.textContent = registering ? 'Create account' : 'Sign in';
+  elements.password.autocomplete = registering ? 'new-password' : 'current-password';
+  elements.authError.textContent = '';
+}
+
+function showSignedOut() {
+  elements.accountBar.classList.add('hidden');
+  elements.gameArea.classList.add('hidden');
+  elements.gameFrame.removeAttribute('src');
+  elements.authCard.classList.remove('hidden');
+}
+
+function showSignedIn(account) {
+  elements.nameInput.value = account.displayName;
+  elements.authCard.classList.add('hidden');
+  elements.accountBar.classList.remove('hidden');
+  elements.gameArea.classList.remove('hidden');
+  // Load the game only once signed in, so its first leaderboard call already has the session.
+  if (!elements.gameFrame.getAttribute('src')) {
+    elements.gameFrame.src = GAME_PATH;
+  }
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  elements.authError.textContent = '';
+  elements.authSubmit.disabled = true;
+  try {
+    const body = { email: elements.email.value, password: elements.password.value };
+    if (isRegistering) {
+      body.displayName = elements.registerName.value;
+    }
+    const result = await callApi('POST', isRegistering ? '/api/auth/register' : '/api/auth/login', body);
+    if (result.ok) {
+      elements.password.value = '';
+      showSignedIn(result.data);
+    } else {
+      elements.authError.textContent = result.data.error || 'Something went wrong.';
+    }
+  } catch (error) {
+    elements.authError.textContent = NETWORK_ERROR_MESSAGE;
+  } finally {
+    elements.authSubmit.disabled = false;
+  }
+}
+
+async function handleGoogleCredential(googleResponse) {
+  elements.authError.textContent = '';
+  try {
+    const result = await callApi('POST', '/api/auth/google', { credential: googleResponse.credential });
+    if (result.ok) {
+      showSignedIn(result.data);
+    } else {
+      elements.authError.textContent = result.data.error || 'Google sign-in failed.';
+    }
+  } catch (error) {
+    elements.authError.textContent = NETWORK_ERROR_MESSAGE;
+  }
+}
+
+function setUpGoogle(clientId) {
+  if (!clientId) {
+    return;
+  }
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.onload = () => {
+    google.accounts.id.initialize({ client_id: clientId, callback: handleGoogleCredential });
+    google.accounts.id.renderButton(elements.googleButton, { theme: 'filled_black', size: 'large', text: 'continue_with', shape: 'pill' });
+    elements.googleArea.classList.remove('hidden');
+  };
+  document.head.appendChild(script);
+}
+
+async function handleNameSave(event) {
+  event.preventDefault();
+  try {
+    const result = await callApi('POST', '/api/account/name', { displayName: elements.nameInput.value });
+    if (result.ok) {
+      elements.nameInput.value = result.data.displayName;
+    } else if (result.status === 401) {
+      showSignedOut();
+    } else {
+      alert(result.data.error || 'Could not save the name.');
+    }
+  } catch (error) {
+    alert(NETWORK_ERROR_MESSAGE);
+  }
+}
+
+async function handleSignOut() {
+  try { await callApi('POST', '/api/auth/logout', {}); } catch (error) { /* signed out locally anyway */ }
+  if (window.google && google.accounts && google.accounts.id) {
+    google.accounts.id.disableAutoSelect();
+  }
+  showSignedOut();
+}
+
+async function start() {
+  elements.tabSignIn.addEventListener('click', () => setMode(false));
+  elements.tabRegister.addEventListener('click', () => setMode(true));
+  elements.authForm.addEventListener('submit', handleAuthSubmit);
+  elements.nameForm.addEventListener('submit', handleNameSave);
+  elements.signOut.addEventListener('click', handleSignOut);
+  elements.fullscreen.addEventListener('click', () => elements.gameFrame.requestFullscreen());
+
+  try {
+    const config = await callApi('GET', '/api/config');
+    setUpGoogle(config.data.googleClientId);
+    const me = await callApi('GET', '/api/auth/me');
+    if (me.ok) {
+      showSignedIn(me.data);
+    } else {
+      showSignedOut();
+    }
+  } catch (error) {
+    showSignedOut();
+    elements.authError.textContent = NETWORK_ERROR_MESSAGE;
+  }
+}
+
+start();
+</script>
+</body>
+</html>

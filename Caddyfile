@@ -1,0 +1,5 @@
+# Automatic HTTPS (Let's Encrypt). DOMAIN comes from .env, e.g. DOMAIN=play.example.com
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8080
+}

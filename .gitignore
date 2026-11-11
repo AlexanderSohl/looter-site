@@ -1,0 +1,5 @@
+node_modules/
+leaderboard.sqlite
+leaderboard.sqlite-shm
+leaderboard.sqlite-wal
+.env
