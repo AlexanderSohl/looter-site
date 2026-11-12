@@ -5,66 +5,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fish Online</title>
   <meta name="description" content="Cast, hook and reel in dozens of fish species in your browser. Log in to post your biggest catches to the leaderboard.">
-  <style>
-    :root {
-      --bg: #0f1820; --panel: #15222d; --panel-2: #1c2e3c; --line: #2a4152;
-      --fg: #e8f1f6; --muted: #8fa7b6; --accent: #f2b632; --good: #6fd08c; --bad: #ff7a7a;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-    header, main, footer { width: min(1100px, 100% - 32px); margin-inline: auto; }
-    header { padding: 24px 0 8px; }
-    h1 { margin: 0; font-size: 1.9rem; letter-spacing: .5px; }
-    .tagline { margin: 4px 0 0; color: var(--muted); }
-    a { color: var(--accent); }
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; }
-    .game-frame { width: min(100%, (100vh - 150px) * 16 / 9); aspect-ratio: 16 / 9; margin-inline: auto; display: block; border: 1px solid var(--line); border-radius: 8px; background: #000; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .spread { justify-content: space-between; }
-    button, input { font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
-    button { cursor: pointer; }
-    button:hover { border-color: var(--accent); }
-    button.primary { background: var(--accent); border-color: var(--accent); color: #1a1205; font-weight: 600; }
-    input { min-width: 0; flex: 1 1 180px; }
-    button.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #1a1205; font-weight: 600; }
-    h2 { margin: 0 0 8px; font-size: 1.15rem; }
-    p.note { margin: 6px 0 0; color: var(--muted); font-size: .9rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
-    th { color: var(--muted); font-weight: 600; font-size: .85rem; }
-    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-    tr.me td { background: rgba(242, 182, 50, .15); }
-    .status { margin-top: 10px; color: var(--muted); }
-    .status.bad { color: var(--bad); }
-    .status.good { color: var(--good); }
-    footer { padding: 24px 0 40px; color: var(--muted); font-size: .85rem; }
-    @media (max-width: 700px) { header, main, footer { width: calc(100% - 16px); } .card { padding: 8px; } }
-    @media (max-width: 600px) { h1 { font-size: 1.5rem; } th:nth-child(4), td:nth-child(4) { display: none; } }
-  </style>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="../site.css">
 </head>
 <body>
-  <header>
-    <h1>Fish Online</h1>
-    <p class="tagline"><a href="../">&larr; All games</a> &middot; Cast, hook and reel. How big can you catch? &middot; <a href="../looter.html">Top Down Looter</a></p>
+  <header class="site-header">
+    <a class="site-name" href="../">Browser Games</a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <ul>
+        <li><a href="../">Games</a></li>
+        <li><a href="../looter.html">Top Down Looter</a></li>
+        <li><a href="./" aria-current="page">Fish Online</a></li>
+        <li><a href="https://alexandersohl.github.io/portfolio/">Portfolio</a></li>
+      </ul>
+    </nav>
   </header>
 
-  <main>
-    <section class="card" aria-label="Game">
+  <main class="page">
+    <div class="page-head">
+      <p class="eyebrow">Cast, hook and reel</p>
+      <h1>Fish Online</h1>
+      <p>How big can you catch? Uses the same accounts as Top Down Looter.</p>
+    </div>
+
+    <section class="frame-panel" aria-label="Game">
       <iframe id="game-frame" class="game-frame" src="play/index.html" title="Fish Online" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
-      <div class="row spread" style="margin-top:10px">
-        <span class="note" style="margin:0">You can play without an account. Log in below to post your catches to the leaderboard.</span>
+      <div class="row spread frame-bar">
+        <p class="note flush">You can play without an account. Log in below to post your catches to the leaderboard.</p>
         <button id="fullscreen-button" type="button">Fullscreen</button>
       </div>
     </section>
 
-    <section class="card" aria-label="Account">
-      <h2>Your account</h2>
+    <section class="panel" aria-labelledby="account-title">
+      <h2 id="account-title">Your account</h2>
       <div id="account-out">
-        <p class="note" style="margin-top:0">Optional. One account works for every game on this site, including Top Down Looter.</p>
-        <form id="account-form" class="row" style="margin-top:10px">
+        <p class="note flush">Optional. One account works for every game on this site, including Top Down Looter.</p>
+        <form id="account-form" class="row stack-sm">
           <input id="account-name" type="text" maxlength="16" placeholder="Name" aria-label="Account name" autocomplete="username" autocapitalize="off" spellcheck="false">
           <input id="account-password" type="password" maxlength="72" placeholder="Password" aria-label="Password" autocomplete="current-password">
-          <button class="primary" type="submit">Log in</button>
+          <button class="btn-primary" type="submit">Log in</button>
           <button id="register-button" type="button">Create account</button>
         </form>
         <p class="note">Names are 3-16 letters, numbers, spaces, - or _. Passwords are 8-72 characters. There is no password recovery yet, so pick one you will remember.</p>
@@ -74,9 +53,9 @@
           <span>Fishing as <strong id="account-display-name"></strong>. Your catches are posted automatically.</span>
           <button id="logout-button" type="button">Log out</button>
         </div>
-        <details style="margin-top:10px">
+        <details class="stack-sm">
           <summary>Change password</summary>
-          <form id="password-form" class="row" style="margin-top:8px">
+          <form id="password-form" class="row stack-sm">
             <input id="old-password" type="password" maxlength="72" placeholder="Current password" aria-label="Current password" autocomplete="current-password">
             <input id="new-password" type="password" maxlength="72" placeholder="New password (8+ characters)" aria-label="New password" autocomplete="new-password">
             <button type="submit">Change</button>
@@ -87,18 +66,23 @@
       <p id="account-status" class="status" role="status"></p>
     </section>
 
-    <section class="card" aria-label="Leaderboard">
-      <h2>Leaderboard</h2>
-      <div id="tabs" class="row" role="tablist"></div>
+    <section class="panel" aria-labelledby="board-title">
+      <div class="panel-head">
+        <h2 id="board-title">Leaderboard</h2>
+      </div>
+      <div id="tabs" class="tabs" role="tablist"></div>
       <table>
-        <thead><tr><th>#</th><th>Player</th><th class="num">Score</th><th>Detail</th></tr></thead>
+        <thead><tr><th>#</th><th>Player</th><th class="num">Score</th><th class="hide-narrow">Detail</th></tr></thead>
         <tbody id="board-body"></tbody>
       </table>
       <p id="board-status" class="status" role="status"></p>
     </section>
   </main>
 
-  <footer>Fish Online &middot; Uses the same accounts as Top Down Looter. Catches are posted by the game for logged-in accounts.</footer>
+  <footer class="site-footer">
+    <p>Fish Online &middot; Catches are posted by the game for logged-in accounts.</p>
+    <p>Made by <a href="https://alexandersohl.github.io/portfolio/">Alexander Sohl</a></p>
+  </footer>
 
   <script src="../config.js"></script>
   <script>
@@ -305,7 +289,7 @@
       });
     }
 
-    var FRAME_RESERVED_HEIGHT = 150;
+    var FRAME_RESERVED_HEIGHT = 170;   // sticky site header + frame panel padding
     var FRAME_SNAP_PIXELS = 16;
     function sizeGameFrame() {
       var frame = byId('game-frame');

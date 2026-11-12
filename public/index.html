@@ -5,67 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Browser Games</title>
   <meta name="description" content="Free browser games: Top Down Looter and Fish Online. One account for both, with online leaderboards.">
-  <style>
-    :root {
-      --bg: #12141b; --panel: #1b1e28; --panel-2: #242836; --line: #323749;
-      --fg: #eceef4; --muted: #979db2; --accent: #f2b632; --good: #6fd08c; --bad: #ff7a7a;
-      --looter: #e5533d; --fish: #3fa7c9;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-    header, main, footer { width: min(1100px, 100% - 32px); margin-inline: auto; }
-    header { padding: 32px 0 8px; }
-    h1 { margin: 0; font-size: 2.1rem; letter-spacing: .5px; }
-    .tagline { margin: 4px 0 0; color: var(--muted); }
-    h2 { margin: 0 0 8px; font-size: 1.15rem; }
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-top: 16px; }
-    .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
-    .game { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
-    .game-art { display: block; width: 100%; aspect-ratio: 16 / 7; text-decoration: none; }
-    .game-art svg { width: 100%; height: 100%; display: block; }
-    .game-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
-    .game-body h2 { font-size: 1.4rem; margin: 0; }
-    .game-body p { margin: 0; color: var(--muted); }
-    .play { display: inline-block; text-align: center; font-weight: 700; text-decoration: none; color: #fff; border-radius: 10px; padding: 12px 16px; font-size: 1.05rem; }
-    .play.looter { background: var(--looter); }
-    .play.fish { background: var(--fish); }
-    .play:hover { filter: brightness(1.1); }
-    .mini-title { color: var(--muted); font-size: .85rem; font-weight: 600; margin-top: 4px; }
-    ol.mini { list-style: none; margin: 0; padding: 0; }
-    ol.mini li { display: flex; gap: 10px; padding: 6px 2px; border-bottom: 1px solid var(--line); font-size: .95rem; }
-    ol.mini li:last-child { border-bottom: 0; }
-    ol.mini .rank { color: var(--muted); width: 2ch; text-align: right; }
-    ol.mini .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    ol.mini .value { font-variant-numeric: tabular-nums; }
-    ol.mini li.me { color: var(--accent); }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .spread { justify-content: space-between; }
-    button, input { font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
-    button { cursor: pointer; }
-    button:hover { border-color: var(--accent); }
-    button.primary { background: var(--accent); border-color: var(--accent); color: #1a1205; font-weight: 600; }
-    input { min-width: 0; flex: 1 1 180px; }
-    p.note { margin: 6px 0 0; color: var(--muted); font-size: .9rem; }
-    .status { margin-top: 10px; color: var(--muted); }
-    .status.bad { color: var(--bad); }
-    .status.good { color: var(--good); }
-    footer { padding: 24px 0 40px; color: var(--muted); font-size: .85rem; }
-    @media (max-width: 600px) { h1 { font-size: 1.6rem; } header, main, footer { width: calc(100% - 20px); } }
-  </style>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="site.css">
 </head>
 <body>
-  <header>
-    <h1>Browser Games</h1>
-    <p class="tagline">Free to play in your browser. One account for every game, with online leaderboards.</p>
+  <header class="site-header">
+    <a class="site-name" href="./">Browser Games</a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <ul>
+        <li><a href="./" aria-current="page">Games</a></li>
+        <li><a href="looter.html">Top Down Looter</a></li>
+        <li><a href="fish/">Fish Online</a></li>
+        <li><a href="https://alexandersohl.github.io/portfolio/">Portfolio</a></li>
+      </ul>
+    </nav>
   </header>
 
-  <main>
-    <section class="games" aria-label="Games">
-      <article class="game">
-        <a class="game-art" href="looter.html" aria-label="Play Top Down Looter">
+  <main class="page">
+    <section class="hero" aria-labelledby="hub-title">
+      <p class="eyebrow">Free to play in your browser</p>
+      <h1 id="hub-title">Browser Games</h1>
+      <p class="lead">No download needed. One account works for every game and puts your scores on the online leaderboards.</p>
+    </section>
+
+    <h2 class="section-title">Games</h2>
+    <section class="game-grid" aria-label="Games">
+      <article class="game-card">
+        <a class="game-art" href="looter.html" aria-label="Play Top Down Looter" tabindex="-1">
           <svg viewBox="0 0 320 140" role="img" aria-hidden="true">
-            <rect width="320" height="140" fill="#1e1a24"/>
-            <g fill="#272230">
+            <rect width="320" height="140" fill="#141216"/>
+            <g fill="#1d1a20">
               <rect x="0" y="0" width="40" height="40"/><rect x="80" y="0" width="40" height="40"/><rect x="160" y="0" width="40" height="40"/><rect x="240" y="0" width="40" height="40"/>
               <rect x="40" y="40" width="40" height="40"/><rect x="120" y="40" width="40" height="40"/><rect x="200" y="40" width="40" height="40"/><rect x="280" y="40" width="40" height="40"/>
               <rect x="0" y="80" width="40" height="40"/><rect x="80" y="80" width="40" height="40"/><rect x="160" y="80" width="40" height="40"/><rect x="240" y="80" width="40" height="40"/>
@@ -80,16 +49,16 @@
           </svg>
         </a>
         <div class="game-body">
-          <h2>Top Down Looter</h2>
+          <h3>Top Down Looter</h3>
           <p>Real-time action looter. Fight through dungeon floors, grab loot, and get out alive.</p>
-          <a class="play looter" href="looter.html">Play Top Down Looter</a>
+          <a class="btn btn-primary btn-play play-looter" href="looter.html">Play Top Down Looter</a>
           <div class="mini-title">Deepest floor</div>
           <ol class="mini" id="looter-board"><li><span class="name">Loading...</span></li></ol>
         </div>
       </article>
 
-      <article class="game">
-        <a class="game-art" href="fish/" aria-label="Play Fish Online">
+      <article class="game-card">
+        <a class="game-art" href="fish/" aria-label="Play Fish Online" tabindex="-1">
           <svg viewBox="0 0 320 140" role="img" aria-hidden="true">
             <defs>
               <linearGradient id="water" x1="0" y1="1" x2="0" y2="0">
@@ -108,23 +77,23 @@
           </svg>
         </a>
         <div class="game-body">
-          <h2>Fish Online</h2>
+          <h3>Fish Online</h3>
           <p>Cast, hook and reel. Catch 26 species, level up your fisherman, and land a monster.</p>
-          <a class="play fish" href="fish/">Play Fish Online</a>
+          <a class="btn btn-primary btn-play play-fish" href="fish/">Play Fish Online</a>
           <div class="mini-title">Biggest fish</div>
           <ol class="mini" id="fish-board"><li><span class="name">Loading...</span></li></ol>
         </div>
       </article>
     </section>
 
-    <section class="card" aria-label="Account">
-      <h2>Your account</h2>
+    <section class="panel" aria-labelledby="account-title">
+      <h2 id="account-title">Your account</h2>
       <div id="account-out">
-        <p class="note" style="margin-top:0">Optional: every game works without one. An account saves your progress online and puts your scores on the leaderboards, in every game.</p>
-        <form id="account-form" class="row" style="margin-top:10px">
+        <p class="note flush">Optional: every game works without one. An account saves your progress online and puts your scores on the leaderboards, in every game.</p>
+        <form id="account-form" class="row stack-sm">
           <input id="account-name" type="text" maxlength="16" placeholder="Name" aria-label="Account name" autocomplete="username" autocapitalize="off" spellcheck="false">
           <input id="account-password" type="password" maxlength="72" placeholder="Password" aria-label="Password" autocomplete="current-password">
-          <button class="primary" type="submit">Log in</button>
+          <button class="btn-primary" type="submit">Log in</button>
           <button id="register-button" type="button">Create account</button>
         </form>
         <p class="note">Names are 3-16 letters, numbers, spaces, - or _. Passwords are 8-72 characters. There is no password recovery yet, so pick one you will remember.</p>
@@ -135,9 +104,9 @@
           <button id="logout-button" type="button">Log out</button>
         </div>
         <p class="note">You're logged in for every game on this site.</p>
-        <details style="margin-top:10px">
+        <details class="stack-sm">
           <summary>Change password</summary>
-          <form id="password-form" class="row" style="margin-top:8px">
+          <form id="password-form" class="row stack-sm">
             <input id="old-password" type="password" maxlength="72" placeholder="Current password" aria-label="Current password" autocomplete="current-password">
             <input id="new-password" type="password" maxlength="72" placeholder="New password (8+ characters)" aria-label="New password" autocomplete="new-password">
             <button type="submit">Change</button>
@@ -149,7 +118,10 @@
     </section>
   </main>
 
-  <footer>Scores are posted by the games for logged-in accounts. Names are first come, first served.</footer>
+  <footer class="site-footer">
+    <p>Scores are posted by the games for logged-in accounts. Names are first come, first served.</p>
+    <p>Made by <a href="https://alexandersohl.github.io/portfolio/">Alexander Sohl</a></p>
+  </footer>
 
   <script src="config.js"></script>
   <script>
@@ -316,11 +288,10 @@
     });
 
     if (!FISH_RELEASED) {
-      var fishPlay = document.querySelector('.play.fish');
+      var fishPlay = document.querySelector('.play-fish');
       fishPlay.textContent = 'Coming soon';
       fishPlay.removeAttribute('href');
-      fishPlay.style.opacity = '0.55';
-      fishPlay.style.cursor = 'default';
+      fishPlay.setAttribute('aria-disabled', 'true');
       var fishArt = document.querySelector('a.game-art[href="fish/"]');
       fishArt.removeAttribute('href');
     }

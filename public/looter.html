@@ -5,67 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Top Down Looter</title>
   <meta name="description" content="Play Top Down Looter in your browser. Play right away, or make an account to save your progress online and climb the leaderboard.">
-  <style>
-    :root {
-      --bg: #14121a; --panel: #1d1a26; --panel-2: #262233; --line: #34304a;
-      --fg: #eceaf2; --muted: #9a96ad; --accent: #e5533d; --good: #6fd08c; --bad: #ff7a7a;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-    header, main, footer { width: min(1100px, 100% - 32px); margin-inline: auto; }
-    header { padding: 24px 0 8px; }
-    h1 { margin: 0; font-size: 1.9rem; letter-spacing: .5px; }
-    .tagline { margin: 4px 0 0; color: var(--muted); }
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; }
-    .game-frame { width: min(100%, (100vh - 150px) * 16 / 9); aspect-ratio: 16 / 9; margin-inline: auto; display: block; border: 1px solid var(--line); border-radius: 8px; background: #000; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .spread { justify-content: space-between; }
-    button, select, input { font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
-    button { cursor: pointer; }
-    button:hover { border-color: var(--accent); }
-    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-    button.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-    input { min-width: 0; flex: 1 1 180px; }
-    code.code { font-size: 1.15rem; letter-spacing: 3px; background: var(--panel-2); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); }
-    h2 { margin: 0 0 8px; font-size: 1.15rem; }
-    p.note { margin: 6px 0 0; color: var(--muted); font-size: .9rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
-    th { color: var(--muted); font-weight: 600; font-size: .85rem; }
-    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-    tr.me td { background: rgba(229, 83, 61, .15); }
-    .status { margin-top: 10px; color: var(--muted); }
-    .status.bad { color: var(--bad); }
-    .status.good { color: var(--good); }
-    footer { padding: 24px 0 40px; color: var(--muted); font-size: .85rem; }
-    @media (max-width: 600px) { h1 { font-size: 1.5rem; } th:nth-child(4), td:nth-child(4) { display: none; } }
-  </style>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="site.css">
 </head>
 <body>
-  <header>
-    <p class="tagline" style="margin:0 0 4px"><a href="./" style="color:inherit">&larr; All games</a></p>
-    <h1>Top Down Looter</h1>
-    <p class="tagline">A real-time action looter. Work in progress: the game updates as content is added.</p>
+  <header class="site-header">
+    <a class="site-name" href="./">Browser Games</a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <ul>
+        <li><a href="./">Games</a></li>
+        <li><a href="looter.html" aria-current="page">Top Down Looter</a></li>
+        <li><a href="fish/">Fish Online</a></li>
+        <li><a href="https://alexandersohl.github.io/portfolio/">Portfolio</a></li>
+      </ul>
+    </nav>
   </header>
 
-  <main>
-    <section class="card" aria-label="Game">
+  <main class="page">
+    <div class="page-head">
+      <p class="eyebrow">Real-time action looter</p>
+      <h1>Top Down Looter</h1>
+      <p>Work in progress: the game updates as content is added.</p>
+    </div>
+
+    <section class="frame-panel" aria-label="Game">
       <iframe id="game-frame" class="game-frame" src="play/index.html" title="Top Down Looter" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
-      <div class="row spread" style="margin-top:10px">
-        <span class="note" style="color:var(--muted);font-size:.9rem">You can play without an account. Log in below to save your progress online, use it on any device, and post scores to the leaderboard.</span>
+      <div class="row spread frame-bar">
+        <p class="note flush">You can play without an account. Log in below to save your progress online, use it on any device, and post scores to the leaderboard.</p>
         <button id="fullscreen-button" type="button">Fullscreen</button>
       </div>
     </section>
 
-    <section class="card" aria-label="Account">
-      <h2>Your account</h2>
+    <section class="panel" aria-labelledby="account-title">
+      <h2 id="account-title">Your account</h2>
 
       <div id="account-out">
-        <p class="note" style="margin-top:0">Optional. Without an account you can still play: your progress stays in this browser. An account saves your progress online so it follows you to any device, and puts your scores on the leaderboard under your name.</p>
-        <form id="account-form" class="row" style="margin-top:10px">
+        <p class="note flush">Optional. Without an account you can still play: your progress stays in this browser. An account saves your progress online so it follows you to any device, and puts your scores on the leaderboard under your name.</p>
+        <form id="account-form" class="row stack-sm">
           <input id="account-name" type="text" maxlength="16" placeholder="Name" aria-label="Account name" autocomplete="username" autocapitalize="off" spellcheck="false">
           <input id="account-password" type="password" maxlength="72" placeholder="Password" aria-label="Password" autocomplete="current-password">
-          <button class="primary" type="submit">Log in</button>
+          <button class="btn-primary" type="submit">Log in</button>
           <button id="register-button" type="button">Create account</button>
         </form>
         <p class="note">Names are 3-16 letters, numbers, spaces, - or _. Passwords are 8-72 characters. There is no password recovery yet, so pick one you will remember.</p>
@@ -77,9 +56,9 @@
           <button id="logout-button" type="button">Log out</button>
         </div>
         <p class="note">Your game save is backed up online a few seconds after each change. Log in with the same name and password on another device to continue there.</p>
-        <details style="margin-top:10px">
+        <details class="stack-sm">
           <summary>Change password</summary>
-          <form id="password-form" class="row" style="margin-top:8px">
+          <form id="password-form" class="row stack-sm">
             <input id="old-password" type="password" maxlength="72" placeholder="Current password" aria-label="Current password" autocomplete="current-password">
             <input id="new-password" type="password" maxlength="72" placeholder="New password (8+ characters)" aria-label="New password" autocomplete="new-password">
             <button type="submit">Change</button>
@@ -91,26 +70,29 @@
       <p id="account-status" class="status" role="status"></p>
     </section>
 
-    <section class="card" aria-label="Leaderboard">
-      <div class="row spread">
-        <h2 style="margin:0">Leaderboard</h2>
-        <label class="row" style="gap:6px">Mode
+    <section class="panel" aria-labelledby="board-title">
+      <div class="panel-head">
+        <h2 id="board-title">Leaderboard</h2>
+        <label class="field-label">Mode
           <select id="mode-select" aria-label="Game mode">
             <option value="normal">Normal</option>
             <option value="roguelike">Roguelike (one life)</option>
           </select>
         </label>
       </div>
-      <div id="tabs" class="row" role="tablist" style="margin-top:10px"></div>
+      <div id="tabs" class="tabs" role="tablist"></div>
       <table>
-        <thead><tr><th>#</th><th>Player</th><th class="num">Score</th><th>Tier</th></tr></thead>
+        <thead><tr><th>#</th><th>Player</th><th class="num">Score</th><th class="hide-narrow">Tier</th></tr></thead>
         <tbody id="board-body"></tbody>
       </table>
       <p id="board-status" class="status" role="status"></p>
     </section>
   </main>
 
-  <footer>Top Down Looter &middot; Scores are submitted by the game for logged-in accounts. Names are first come, first served.</footer>
+  <footer class="site-footer">
+    <p>Top Down Looter &middot; Scores are submitted by the game for logged-in accounts. Names are first come, first served.</p>
+    <p>Made by <a href="https://alexandersohl.github.io/portfolio/">Alexander Sohl</a></p>
+  </footer>
 
   <script src="config.js"></script>
   <script>
@@ -288,7 +270,7 @@
 
     // Size the game frame in whole, multiple-of-8 pixels. A fractional CSS size makes the browser
     // resample the canvas, which is what makes text look fuzzy. (CSS aspect-ratio stays as the fallback.)
-    var FRAME_RESERVED_HEIGHT = 150;
+    var FRAME_RESERVED_HEIGHT = 170;   // sticky site header + frame panel padding
     var FRAME_SNAP_PIXELS = 16;   // 16 keeps width * 9 / 16 a whole number too
     function sizeGameFrame() {
       var frame = byId('game-frame');
