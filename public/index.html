@@ -307,6 +307,17 @@
       if (frame.requestFullscreen) { frame.requestFullscreen(); }
     });
 
+    // Browsers only report a controller to the frame that has focus, and a controller is only "seen" after
+    // its first button press while that frame is focused. Hand focus to the game frame on load, when the
+    // pointer enters it, and when a controller connects, so pressing a button just works.
+    function focusGameFrame() {
+      var frame = byId('game-frame');
+      try { frame.focus(); if (frame.contentWindow) { frame.contentWindow.focus(); } } catch (focusError) { }
+    }
+    byId('game-frame').addEventListener('load', focusGameFrame);
+    byId('game-frame').addEventListener('mouseenter', focusGameFrame);
+    window.addEventListener('gamepadconnected', focusGameFrame);
+
     // ---------- Leaderboard ----------
     function buildTabs() {
       var tabs = byId('tabs');
