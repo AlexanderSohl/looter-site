@@ -5,10 +5,14 @@ Players can play with **no account**. To save progress online and post scores th
 account on the website**; the page stores a login token that the game reads. There are no recovery codes.
 
 ```
-public/index.html           landing page: game iframe, account panel (log in / create / log out), leaderboard table
+public/index.html           main page: game cards (Looter + Fish Online), shared account panel, mini leaderboards
+public/looter.html          Top Down Looter page: game iframe, account panel, leaderboard table
 public/config.js            Supabase URL + PUBLIC key (safe to publish; never the service_role key)
-public/play/                Unity WebGL build (Unity menu: Looter -> Build WebGL Test)
+public/play/                Looter Unity WebGL build (Unity menu: Looter -> Build WebGL Test)
+public/fish/index.html      Fish Online page: game iframe + fish leaderboards (log in on the main page)
+public/fish/play/           Fish Online Unity WebGL build (Fish Online project: Fish Online -> Build WebGL Test)
 supabase/schema.sql         tables, locked down, plus the RPC functions the game and site call (safe to re-run)
+supabase/fish_schema.sql    Fish Online tables + RPCs (submit_fish_stats, get_fish_leaderboard); run after schema.sql
 supabase/migration_accounts.sql  ONE-TIME wipe + switch from recovery codes to accounts (deletes all data)
 ```
 
@@ -78,3 +82,13 @@ or write those tables directly; only the functions in `schema.sql` are callable.
 
 `runs.mode` supports `normal` and `roguelike`; the leaderboard function takes a mode, and the site has a mode
 selector. The game sends the mode of each run (`GameModeNames`).
+
+## Fish Online
+
+Second game on the same site and Supabase project, sharing the same accounts (`looter_session` token).
+
+1. Supabase -> SQL Editor: run `supabase/fish_schema.sql` (safe to re-run; only adds fish tables/functions),
+   then `notify pgrst, 'reload schema';`.
+2. In `public/index.html` set `FISH_RELEASED = true` so the main page links to `/fish/` instead of "Coming soon".
+3. To update the game: in the Fish Online Unity project run **Fish Online -> Build WebGL Test**, copy its
+   `Site/fish/play/` over `public/fish/play/`, commit and push. Keep the gzipped `.wasm` under 25 MiB.

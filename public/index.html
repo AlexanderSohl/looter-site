@@ -3,64 +3,124 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Top Down Looter</title>
-  <meta name="description" content="Play Top Down Looter in your browser. Play right away, or make an account to save your progress online and climb the leaderboard.">
+  <title>Browser Games</title>
+  <meta name="description" content="Free browser games: Top Down Looter and Fish Online. One account for both, with online leaderboards.">
   <style>
     :root {
-      --bg: #14121a; --panel: #1d1a26; --panel-2: #262233; --line: #34304a;
-      --fg: #eceaf2; --muted: #9a96ad; --accent: #e5533d; --good: #6fd08c; --bad: #ff7a7a;
+      --bg: #12141b; --panel: #1b1e28; --panel-2: #242836; --line: #323749;
+      --fg: #eceef4; --muted: #979db2; --accent: #f2b632; --good: #6fd08c; --bad: #ff7a7a;
+      --looter: #e5533d; --fish: #3fa7c9;
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
     header, main, footer { width: min(1100px, 100% - 32px); margin-inline: auto; }
-    header { padding: 24px 0 8px; }
-    h1 { margin: 0; font-size: 1.9rem; letter-spacing: .5px; }
+    header { padding: 32px 0 8px; }
+    h1 { margin: 0; font-size: 2.1rem; letter-spacing: .5px; }
     .tagline { margin: 4px 0 0; color: var(--muted); }
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; }
-    .game-frame { width: min(100%, (100vh - 150px) * 16 / 9); aspect-ratio: 16 / 9; margin-inline: auto; display: block; border: 1px solid var(--line); border-radius: 8px; background: #000; }
+    h2 { margin: 0 0 8px; font-size: 1.15rem; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-top: 16px; }
+    .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
+    .game { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+    .game-art { display: block; width: 100%; aspect-ratio: 16 / 7; text-decoration: none; }
+    .game-art svg { width: 100%; height: 100%; display: block; }
+    .game-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+    .game-body h2 { font-size: 1.4rem; margin: 0; }
+    .game-body p { margin: 0; color: var(--muted); }
+    .play { display: inline-block; text-align: center; font-weight: 700; text-decoration: none; color: #fff; border-radius: 10px; padding: 12px 16px; font-size: 1.05rem; }
+    .play.looter { background: var(--looter); }
+    .play.fish { background: var(--fish); }
+    .play:hover { filter: brightness(1.1); }
+    .mini-title { color: var(--muted); font-size: .85rem; font-weight: 600; margin-top: 4px; }
+    ol.mini { list-style: none; margin: 0; padding: 0; }
+    ol.mini li { display: flex; gap: 10px; padding: 6px 2px; border-bottom: 1px solid var(--line); font-size: .95rem; }
+    ol.mini li:last-child { border-bottom: 0; }
+    ol.mini .rank { color: var(--muted); width: 2ch; text-align: right; }
+    ol.mini .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    ol.mini .value { font-variant-numeric: tabular-nums; }
+    ol.mini li.me { color: var(--accent); }
     .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .spread { justify-content: space-between; }
-    button, select, input { font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+    button, input { font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); }
-    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-    button.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #1a1205; font-weight: 600; }
     input { min-width: 0; flex: 1 1 180px; }
-    code.code { font-size: 1.15rem; letter-spacing: 3px; background: var(--panel-2); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); }
-    h2 { margin: 0 0 8px; font-size: 1.15rem; }
     p.note { margin: 6px 0 0; color: var(--muted); font-size: .9rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
-    th { color: var(--muted); font-weight: 600; font-size: .85rem; }
-    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-    tr.me td { background: rgba(229, 83, 61, .15); }
     .status { margin-top: 10px; color: var(--muted); }
     .status.bad { color: var(--bad); }
     .status.good { color: var(--good); }
     footer { padding: 24px 0 40px; color: var(--muted); font-size: .85rem; }
-    @media (max-width: 600px) { h1 { font-size: 1.5rem; } th:nth-child(4), td:nth-child(4) { display: none; } }
+    @media (max-width: 600px) { h1 { font-size: 1.6rem; } header, main, footer { width: calc(100% - 20px); } }
   </style>
 </head>
 <body>
   <header>
-    <h1>Top Down Looter</h1>
-    <p class="tagline">A real-time action looter. Work in progress: the game updates as content is added.</p>
+    <h1>Browser Games</h1>
+    <p class="tagline">Free to play in your browser. One account for every game, with online leaderboards.</p>
   </header>
 
   <main>
-    <section class="card" aria-label="Game">
-      <iframe id="game-frame" class="game-frame" src="play/index.html" title="Top Down Looter" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
-      <div class="row spread" style="margin-top:10px">
-        <span class="note" style="color:var(--muted);font-size:.9rem">You can play without an account. Log in below to save your progress online, use it on any device, and post scores to the leaderboard.</span>
-        <button id="fullscreen-button" type="button">Fullscreen</button>
-      </div>
+    <section class="games" aria-label="Games">
+      <article class="game">
+        <a class="game-art" href="looter.html" aria-label="Play Top Down Looter">
+          <svg viewBox="0 0 320 140" role="img" aria-hidden="true">
+            <rect width="320" height="140" fill="#1e1a24"/>
+            <g fill="#272230">
+              <rect x="0" y="0" width="40" height="40"/><rect x="80" y="0" width="40" height="40"/><rect x="160" y="0" width="40" height="40"/><rect x="240" y="0" width="40" height="40"/>
+              <rect x="40" y="40" width="40" height="40"/><rect x="120" y="40" width="40" height="40"/><rect x="200" y="40" width="40" height="40"/><rect x="280" y="40" width="40" height="40"/>
+              <rect x="0" y="80" width="40" height="40"/><rect x="80" y="80" width="40" height="40"/><rect x="160" y="80" width="40" height="40"/><rect x="240" y="80" width="40" height="40"/>
+              <rect x="40" y="120" width="40" height="20"/><rect x="120" y="120" width="40" height="20"/><rect x="200" y="120" width="40" height="20"/><rect x="280" y="120" width="40" height="20"/>
+            </g>
+            <path d="M 150 50 A 34 34 0 0 1 172 104" fill="none" stroke="#ffffff" stroke-opacity=".75" stroke-width="7" stroke-linecap="round"/>
+            <circle cx="140" cy="76" r="15" fill="#e5533d"/>
+            <circle cx="232" cy="58" r="12" fill="#6fd08c"/>
+            <circle cx="256" cy="98" r="10" fill="#6fd08c"/>
+            <circle cx="70" cy="104" r="8" fill="#f2b632"/>
+            <circle cx="92" cy="40" r="6" fill="#f2b632"/>
+          </svg>
+        </a>
+        <div class="game-body">
+          <h2>Top Down Looter</h2>
+          <p>Real-time action looter. Fight through dungeon floors, grab loot, and get out alive.</p>
+          <a class="play looter" href="looter.html">Play Top Down Looter</a>
+          <div class="mini-title">Deepest floor</div>
+          <ol class="mini" id="looter-board"><li><span class="name">Loading...</span></li></ol>
+        </div>
+      </article>
+
+      <article class="game">
+        <a class="game-art" href="fish/" aria-label="Play Fish Online">
+          <svg viewBox="0 0 320 140" role="img" aria-hidden="true">
+            <defs>
+              <linearGradient id="water" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0" stop-color="#5cc7d1"/><stop offset="1" stop-color="#12335f"/>
+              </linearGradient>
+            </defs>
+            <rect width="320" height="140" fill="url(#water)"/>
+            <circle cx="236" cy="54" r="22" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2"/>
+            <circle cx="236" cy="54" r="34" fill="none" stroke="#fff" stroke-opacity=".2" stroke-width="2"/>
+            <path d="M 150 140 Q 190 100 236 54" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.6"/>
+            <circle cx="236" cy="54" r="6" fill="#e83030"/><circle cx="236" cy="54" r="2.6" fill="#fff"/>
+            <g transform="translate(110 70) rotate(-12)"><polygon points="-14,0 -34,-12 -34,12" fill="#f2b632"/><circle r="16" fill="#f2b632"/></g>
+            <g transform="translate(60 40) rotate(160)" opacity=".35"><polygon points="-8,0 -20,-7 -20,7" fill="#06142a"/><circle r="9" fill="#06142a"/></g>
+            <g transform="translate(276 108) rotate(200)" opacity=".35"><polygon points="-10,0 -24,-9 -24,9" fill="#06142a"/><circle r="11" fill="#06142a"/></g>
+            <circle cx="40" cy="104" r="14" fill="#3f8f45"/><circle cx="292" cy="22" r="11" fill="#3f8f45"/>
+          </svg>
+        </a>
+        <div class="game-body">
+          <h2>Fish Online</h2>
+          <p>Cast, hook and reel. Catch 26 species, level up your fisherman, and land a monster.</p>
+          <a class="play fish" href="fish/">Play Fish Online</a>
+          <div class="mini-title">Biggest fish</div>
+          <ol class="mini" id="fish-board"><li><span class="name">Loading...</span></li></ol>
+        </div>
+      </article>
     </section>
 
     <section class="card" aria-label="Account">
       <h2>Your account</h2>
-
       <div id="account-out">
-        <p class="note" style="margin-top:0">Optional. Without an account you can still play: your progress stays in this browser. An account saves your progress online so it follows you to any device, and puts your scores on the leaderboard under your name.</p>
+        <p class="note" style="margin-top:0">Optional: every game works without one. An account saves your progress online and puts your scores on the leaderboards, in every game.</p>
         <form id="account-form" class="row" style="margin-top:10px">
           <input id="account-name" type="text" maxlength="16" placeholder="Name" aria-label="Account name" autocomplete="username" autocapitalize="off" spellcheck="false">
           <input id="account-password" type="password" maxlength="72" placeholder="Password" aria-label="Password" autocomplete="current-password">
@@ -69,13 +129,12 @@
         </form>
         <p class="note">Names are 3-16 letters, numbers, spaces, - or _. Passwords are 8-72 characters. There is no password recovery yet, so pick one you will remember.</p>
       </div>
-
       <div id="account-in" hidden>
         <div class="row spread">
           <span>Logged in as <strong id="account-display-name"></strong></span>
           <button id="logout-button" type="button">Log out</button>
         </div>
-        <p class="note">Your game save is backed up online a few seconds after each change. Log in with the same name and password on another device to continue there.</p>
+        <p class="note">You're logged in for every game on this site.</p>
         <details style="margin-top:10px">
           <summary>Change password</summary>
           <form id="password-form" class="row" style="margin-top:8px">
@@ -86,66 +145,28 @@
           <p class="note">Changing your password logs out your other devices.</p>
         </details>
       </div>
-
       <p id="account-status" class="status" role="status"></p>
-    </section>
-
-    <section class="card" aria-label="Leaderboard">
-      <div class="row spread">
-        <h2 style="margin:0">Leaderboard</h2>
-        <label class="row" style="gap:6px">Mode
-          <select id="mode-select" aria-label="Game mode">
-            <option value="normal">Normal</option>
-            <option value="roguelike">Roguelike (one life)</option>
-          </select>
-        </label>
-      </div>
-      <div id="tabs" class="row" role="tablist" style="margin-top:10px"></div>
-      <table>
-        <thead><tr><th>#</th><th>Player</th><th class="num">Score</th><th>Tier</th></tr></thead>
-        <tbody id="board-body"></tbody>
-      </table>
-      <p id="board-status" class="status" role="status"></p>
     </section>
   </main>
 
-  <footer>Top Down Looter &middot; Scores are submitted by the game for logged-in accounts. Names are first come, first served.</footer>
+  <footer>Scores are posted by the games for logged-in accounts. Names are first come, first served.</footer>
 
   <script src="config.js"></script>
   <script>
     'use strict';
-    // The game reads the login session token from this same localStorage key (see PlayerKeyStore.cs). Change both together.
+    // Same key the games and the game pages use for the login token. Change all together.
     var SESSION_STORAGE_KEY = 'looter_session';
-    var LEGACY_STORAGE_KEY = 'looter_recovery_code';
-    var ACCOUNT_POLL_MILLISECONDS = 2000;
-    var BOARD_ROW_COUNT = 50;
-    var CATEGORIES = [
-      { key: 'deepestFloor', label: 'Deepest floor' },
-      { key: 'mostKills', label: 'Most kills' },
-      { key: 'mostElitesKilled', label: 'Elites killed' },
-      { key: 'mostGoldExtracted', label: 'Gold extracted' },
-      { key: 'highestDifficulty', label: 'Highest difficulty' }
-    ];
-
+    var MINI_BOARD_ROWS = 5;
+    // Set to true once the Fish Online build is in public/fish/play/. Until then its card shows "Coming soon".
+    var FISH_RELEASED = true;
     var config = window.LOOTER_CONFIG || {};
-    var currentCategory = CATEGORIES[0].key;
-    var requestCounter = 0;
+    var myPlayerId = null;
 
     function byId(id) { return document.getElementById(id); }
+    function readStorage() { try { return window.localStorage.getItem(SESSION_STORAGE_KEY) || ''; } catch (e) { return ''; } }
+    function writeStorage(value) { try { window.localStorage.setItem(SESSION_STORAGE_KEY, value); return true; } catch (e) { return false; } }
+    function clearStorage() { try { window.localStorage.removeItem(SESSION_STORAGE_KEY); } catch (e) { /* storage blocked */ } }
 
-    function readStorage() {
-      try { return window.localStorage.getItem(SESSION_STORAGE_KEY) || ''; } catch (error) { return ''; }
-    }
-    function writeStorage(value) {
-      try { window.localStorage.setItem(SESSION_STORAGE_KEY, value); return true; } catch (error) { return false; }
-    }
-    function clearStorage() {
-      try { window.localStorage.removeItem(SESSION_STORAGE_KEY); } catch (error) { /* storage blocked: nothing to clear */ }
-    }
-    try { window.localStorage.removeItem(LEGACY_STORAGE_KEY); } catch (error) { /* storage blocked */ }
-
-    // Calls a Supabase SQL function. Rejects with Error(message): the database's short code
-    // (e.g. "invalid_key") for server errors, or "network" when the server cannot be reached.
     function callRpc(functionName, body) {
       if (!config.supabaseUrl || !config.supabaseKey) { return Promise.reject(new Error('not_configured')); }
       var headers = { 'Content-Type': 'application/json', 'apikey': config.supabaseKey };
@@ -160,9 +181,49 @@
       }, function () { throw new Error('network'); });
     }
 
-    // ---------- Account panel (name + password) ----------
-    // The password is only ever sent to the server in the login/register/change calls and is never stored here.
-    // What the browser keeps is a random session token; the game uses the same token for scores and cloud saves.
+    // ---------- Mini leaderboards ----------
+    function formatKg(kg) {
+      kg = Number(kg) || 0;
+      if (kg < 1) { return Math.round(kg * 1000) + ' g'; }
+      return kg.toFixed(kg < 100 ? 2 : 1) + ' kg';
+    }
+    function renderMini(listId, entries, formatValue) {
+      var list = byId(listId);
+      list.textContent = '';
+      if (!entries.length) {
+        var empty = document.createElement('li');
+        empty.innerHTML = '<span class="name">No scores yet. Be the first!</span>';
+        list.appendChild(empty);
+        return;
+      }
+      entries.slice(0, MINI_BOARD_ROWS).forEach(function (entry) {
+        var item = document.createElement('li');
+        if (myPlayerId && entry.playerId === myPlayerId) { item.className = 'me'; }
+        [['rank', entry.rank], ['name', entry.displayName], ['value', formatValue(entry)]].forEach(function (part) {
+          var span = document.createElement('span');
+          span.className = part[0];
+          span.textContent = part[1];   // textContent: names are never HTML
+          item.appendChild(span);
+        });
+        list.appendChild(item);
+      });
+    }
+    function showBoardError(listId) {
+      var list = byId(listId);
+      list.innerHTML = '<li><span class="name">Leaderboard unavailable right now.</span></li>';
+    }
+    function loadBoards() {
+      callRpc('get_leaderboard', { p_category: 'deepestFloor', p_limit: MINI_BOARD_ROWS, p_mode: 'normal' }).then(function (reply) {
+        renderMini('looter-board', (reply && reply.entries) || [], function (entry) { return 'Floor ' + entry.value; });
+      }).catch(function () { showBoardError('looter-board'); });
+      callRpc('get_fish_leaderboard', { p_category: 'biggest', p_limit: MINI_BOARD_ROWS }).then(function (reply) {
+        renderMini('fish-board', (reply && reply.entries) || [], function (entry) {
+          return (entry.detail ? entry.detail + ' ' : '') + formatKg(entry.value);
+        });
+      }).catch(function () { showBoardError('fish-board'); });
+    }
+
+    // ---------- Account panel ----------
     var ERROR_TEXT = {
       invalid_login: 'Wrong name or password.',
       invalid_name: 'Names need 3-16 letters, numbers, spaces, - or _.',
@@ -174,9 +235,6 @@
       network: 'Could not reach the server. Try again in a moment.',
       not_configured: 'Accounts are not connected yet.'
     };
-    var shownToken = null;
-    var myPlayerId = null;
-
     function setAccountStatus(text, kind) {
       var status = byId('account-status');
       status.className = 'status' + (kind ? ' ' + kind : '');
@@ -186,9 +244,6 @@
       var message = error && error.message;
       return ERROR_TEXT[message] || 'Something went wrong (' + message + ').';
     }
-    function reloadGame() {
-      byId('game-frame').src = byId('game-frame').src;
-    }
     function showLoggedOut() {
       myPlayerId = null;
       byId('account-out').hidden = false;
@@ -196,38 +251,25 @@
     }
     function showLoggedIn(account) {
       myPlayerId = account.playerId;
-      byId('account-display-name').textContent = account.displayName;   // textContent: names are never HTML
+      byId('account-display-name').textContent = account.displayName;
       byId('account-out').hidden = true;
       byId('account-in').hidden = false;
     }
-
-    // Looks up who the stored token belongs to. Runs when the token changes (login here, logout, or the game
-    // clearing an expired token), checked by the poll below.
-    function refreshAccountPanel() {
+    function refreshAccount() {
       var token = readStorage();
-      if (token === shownToken) { return; }
-      shownToken = token;
-      if (!token) {
-        showLoggedOut();
-        loadBoard();
-        return;
-      }
+      if (!token) { showLoggedOut(); loadBoards(); return; }
       callRpc('get_account', { p_player_key: token }).then(function (account) {
         showLoggedIn(account);
-        loadBoard();
+        loadBoards();
       }).catch(function (error) {
         if (error && error.message === 'invalid_key') {
           clearStorage();
-          shownToken = '';
           showLoggedOut();
           setAccountStatus(describeError(error), 'bad');
         }
-        // A network error keeps the token: the game may still be fine, and the next page load retries.
+        loadBoards();
       });
     }
-    setInterval(refreshAccountPanel, ACCOUNT_POLL_MILLISECONDS);
-
-    // Calls login or register_account, stores the token and restarts the game so it picks the account up.
     function signIn(functionName, doneMessage) {
       var nameInput = byId('account-name');
       var passwordInput = byId('account-password');
@@ -241,157 +283,49 @@
           return;
         }
         passwordInput.value = '';
-        shownToken = result.token;
         showLoggedIn(result);
         setAccountStatus(doneMessage, 'good');
-        reloadGame();
-        loadBoard();
-      }).catch(function (error) {
-        setAccountStatus(describeError(error), 'bad');
-      });
+        loadBoards();
+      }).catch(function (error) { setAccountStatus(describeError(error), 'bad'); });
     }
-
     byId('account-form').addEventListener('submit', function (event) {
       event.preventDefault();
-      signIn('login', 'Logged in. The game reloads with your account.');
+      signIn('login', 'Logged in. Pick a game!');
     });
     byId('register-button').addEventListener('click', function () {
-      signIn('register_account', 'Account created. The game reloads with your account.');
+      signIn('register_account', 'Account created. Pick a game!');
     });
-
     byId('logout-button').addEventListener('click', function () {
       var token = readStorage();
       clearStorage();
-      shownToken = '';
       showLoggedOut();
       setAccountStatus('Logged out.', '');
-      if (token) { callRpc('logout', { p_player_key: token }).catch(function () { /* the token is already forgotten here */ }); }
-      reloadGame();
-      loadBoard();
+      if (token) { callRpc('logout', { p_player_key: token }).catch(function () { /* already forgotten here */ }); }
+      loadBoards();
     });
-
     byId('password-form').addEventListener('submit', function (event) {
       event.preventDefault();
-      var token = readStorage();
-      var body = { p_player_key: token, p_old_password: byId('old-password').value, p_new_password: byId('new-password').value };
+      var body = { p_player_key: readStorage(), p_old_password: byId('old-password').value, p_new_password: byId('new-password').value };
       setAccountStatus('Working...', '');
       callRpc('change_password', body).then(function (result) {
         if (result && result.error) { throw new Error(result.error); }
         byId('old-password').value = '';
         byId('new-password').value = '';
         setAccountStatus('Password changed. Your other devices were logged out.', 'good');
-      }).catch(function (error) {
-        setAccountStatus(describeError(error), 'bad');
-      });
+      }).catch(function (error) { setAccountStatus(describeError(error), 'bad'); });
     });
 
-    // Size the game frame in whole, multiple-of-8 pixels. A fractional CSS size makes the browser
-    // resample the canvas, which is what makes text look fuzzy. (CSS aspect-ratio stays as the fallback.)
-    var FRAME_RESERVED_HEIGHT = 150;
-    var FRAME_SNAP_PIXELS = 16;   // 16 keeps width * 9 / 16 a whole number too
-    function sizeGameFrame() {
-      var frame = byId('game-frame');
-      if (document.fullscreenElement) { return; }
-      var availableWidth = frame.parentElement.clientWidth - 32;
-      var availableHeight = window.innerHeight - FRAME_RESERVED_HEIGHT;
-      var width = Math.min(availableWidth, availableHeight * 16 / 9);
-      width = Math.max(FRAME_SNAP_PIXELS * 20, Math.floor(width / FRAME_SNAP_PIXELS) * FRAME_SNAP_PIXELS);
-      frame.style.width = width + 'px';
-      frame.style.height = Math.round(width * 9 / 16) + 'px';
-    }
-    window.addEventListener('resize', sizeGameFrame);
-    sizeGameFrame();
-
-    byId('fullscreen-button').addEventListener('click', function () {
-      var frame = byId('game-frame');
-      if (frame.requestFullscreen) { frame.requestFullscreen(); }
-    });
-
-    // Browsers only report a controller to the frame that has focus, and a controller is only "seen" after
-    // its first button press while that frame is focused. Hand focus to the game frame on load, when the
-    // pointer enters it, and when a controller connects, so pressing a button just works.
-    function focusGameFrame() {
-      var frame = byId('game-frame');
-      try { frame.focus(); if (frame.contentWindow) { frame.contentWindow.focus(); } } catch (focusError) { }
-    }
-    byId('game-frame').addEventListener('load', focusGameFrame);
-    byId('game-frame').addEventListener('mouseenter', focusGameFrame);
-    window.addEventListener('gamepadconnected', focusGameFrame);
-
-    // ---------- Leaderboard ----------
-    function buildTabs() {
-      var tabs = byId('tabs');
-      CATEGORIES.forEach(function (category) {
-        var button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'tab';
-        button.setAttribute('role', 'tab');
-        button.setAttribute('aria-selected', String(category.key === currentCategory));
-        button.textContent = category.label;
-        button.addEventListener('click', function () {
-          currentCategory = category.key;
-          Array.prototype.forEach.call(tabs.children, function (child) { child.setAttribute('aria-selected', 'false'); });
-          button.setAttribute('aria-selected', 'true');
-          loadBoard();
-        });
-        tabs.appendChild(button);
-      });
+    if (!FISH_RELEASED) {
+      var fishPlay = document.querySelector('.play.fish');
+      fishPlay.textContent = 'Coming soon';
+      fishPlay.removeAttribute('href');
+      fishPlay.style.opacity = '0.55';
+      fishPlay.style.cursor = 'default';
+      var fishArt = document.querySelector('a.game-art[href="fish/"]');
+      fishArt.removeAttribute('href');
     }
 
-    function setBoardStatus(text, isBad) {
-      var status = byId('board-status');
-      status.textContent = text;
-      status.className = isBad ? 'status bad' : 'status';
-    }
-
-    function renderRows(entries, myPlayerId) {
-      var body = byId('board-body');
-      body.textContent = '';
-      entries.forEach(function (entry) {
-        var row = document.createElement('tr');
-        if (entry.playerId === myPlayerId) { row.className = 'me'; }
-        [entry.rank, entry.displayName, entry.value, entry.difficultyTier].forEach(function (cellValue, cellIndex) {
-          var cell = document.createElement('td');
-          if (cellIndex === 2) { cell.className = 'num'; }
-          cell.textContent = cellValue;   // textContent: player names are never treated as HTML
-          row.appendChild(cell);
-        });
-        body.appendChild(row);
-      });
-    }
-
-    function loadBoard() {
-      if (!config.supabaseUrl || !config.supabaseKey) {
-        setBoardStatus('Leaderboard is not connected yet.', true);
-        return;
-      }
-      requestCounter += 1;
-      var thisRequest = requestCounter;
-      setBoardStatus('Loading...', false);
-      var headers = { 'Content-Type': 'application/json', 'apikey': config.supabaseKey };
-      if (config.supabaseKey.indexOf('eyJ') === 0) { headers['Authorization'] = 'Bearer ' + config.supabaseKey; }
-      fetch(config.supabaseUrl.replace(/\/+$/, '') + '/rest/v1/rpc/get_leaderboard', {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({ p_category: currentCategory, p_limit: BOARD_ROW_COUNT, p_mode: byId('mode-select').value })
-      }).then(function (response) {
-        if (!response.ok) { throw new Error('HTTP ' + response.status); }
-        return response.json();
-      }).then(function (reply) {
-        if (thisRequest !== requestCounter) { return; }
-        var entries = (reply && reply.entries) || [];
-        renderRows(entries, myPlayerId);
-        setBoardStatus(entries.length ? '' : 'No scores yet. Be the first.', false);
-      }).catch(function () {
-        if (thisRequest !== requestCounter) { return; }
-        setBoardStatus('Could not load the leaderboard. Try again in a moment.', true);
-      });
-    }
-
-    byId('mode-select').addEventListener('change', loadBoard);
-    buildTabs();
-    refreshAccountPanel();
-    loadBoard();
+    refreshAccount();
   </script>
 </body>
 </html>

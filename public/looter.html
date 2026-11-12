@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Top Down Looter</title>
+  <meta name="description" content="Play Top Down Looter in your browser. Play right away, or make an account to save your progress online and climb the leaderboard.">
+  <style>
+    :root {
+      --bg: #14121a; --panel: #1d1a26; --panel-2: #262233; --line: #34304a;
+      --fg: #eceaf2; --muted: #9a96ad; --accent: #e5533d; --good: #6fd08c; --bad: #ff7a7a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    header, main, footer { width: min(1100px, 100% - 32px); margin-inline: auto; }
+    header { padding: 24px 0 8px; }
+    h1 { margin: 0; font-size: 1.9rem; letter-spacing: .5px; }
+    .tagline { margin: 4px 0 0; color: var(--muted); }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; }
+    .game-frame { width: min(100%, (100vh - 150px) * 16 / 9); aspect-ratio: 16 / 9; margin-inline: auto; display: block; border: 1px solid var(--line); border-radius: 8px; background: #000; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .spread { justify-content: space-between; }
+    button, select, input { font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    button.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+    input { min-width: 0; flex: 1 1 180px; }
+    code.code { font-size: 1.15rem; letter-spacing: 3px; background: var(--panel-2); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); }
+    h2 { margin: 0 0 8px; font-size: 1.15rem; }
+    p.note { margin: 6px 0 0; color: var(--muted); font-size: .9rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; font-size: .85rem; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tr.me td { background: rgba(229, 83, 61, .15); }
+    .status { margin-top: 10px; color: var(--muted); }
+    .status.bad { color: var(--bad); }
+    .status.good { color: var(--good); }
+    footer { padding: 24px 0 40px; color: var(--muted); font-size: .85rem; }
+    @media (max-width: 600px) { h1 { font-size: 1.5rem; } th:nth-child(4), td:nth-child(4) { display: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="tagline" style="margin:0 0 4px"><a href="./" style="color:inherit">&larr; All games</a></p>
+    <h1>Top Down Looter</h1>
+    <p class="tagline">A real-time action looter. Work in progress: the game updates as content is added.</p>
+  </header>
+
+  <main>
+    <section class="card" aria-label="Game">
+      <iframe id="game-frame" class="game-frame" src="play/index.html" title="Top Down Looter" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
+      <div class="row spread" style="margin-top:10px">
+        <span class="note" style="color:var(--muted);font-size:.9rem">You can play without an account. Log in below to save your progress online, use it on any device, and post scores to the leaderboard.</span>
+        <button id="fullscreen-button" type="button">Fullscreen</button>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Account">
+      <h2>Your account</h2>
+
+      <div id="account-out">
+        <p class="note" style="margin-top:0">Optional. Without an account you can still play: your progress stays in this browser. An account saves your progress online so it follows you to any device, and puts your scores on the leaderboard under your name.</p>
+        <form id="account-form" class="row" style="margin-top:10px">
+          <input id="account-name" type="text" maxlength="16" placeholder="Name" aria-label="Account name" autocomplete="username" autocapitalize="off" spellcheck="false">
+          <input id="account-password" type="password" maxlength="72" placeholder="Password" aria-label="Password" autocomplete="current-password">
+          <button class="primary" type="submit">Log in</button>
+          <button id="register-button" type="button">Create account</button>
+        </form>
+        <p class="note">Names are 3-16 letters, numbers, spaces, - or _. Passwords are 8-72 characters. There is no password recovery yet, so pick one you will remember.</p>
+      </div>
+
+      <div id="account-in" hidden>
+        <div class="row spread">
+          <span>Logged in as <strong id="account-display-name"></strong></span>
+          <button id="logout-button" type="button">Log out</button>
+        </div>
+        <p class="note">Your game save is backed up online a few seconds after each change. Log in with the same name and password on another device to continue there.</p>
+        <details style="margin-top:10px">
+          <summary>Change password</summary>
+          <form id="password-form" class="row" style="margin-top:8px">
+            <input id="old-password" type="password" maxlength="72" placeholder="Current password" aria-label="Current password" autocomplete="current-password">
+            <input id="new-password" type="password" maxlength="72" placeholder="New password (8+ characters)" aria-label="New password" autocomplete="new-password">
+            <button type="submit">Change</button>
+          </form>
+          <p class="note">Changing your password logs out your other devices.</p>
+        </details>
+      </div>
+
+      <p id="account-status" class="status" role="status"></p>
+    </section>
+
+    <section class="card" aria-label="Leaderboard">
+      <div class="row spread">
+        <h2 style="margin:0">Leaderboard</h2>
+        <label class="row" style="gap:6px">Mode
+          <select id="mode-select" aria-label="Game mode">
+            <option value="normal">Normal</option>
+            <option value="roguelike">Roguelike (one life)</option>
+          </select>
+        </label>
+      </div>
+      <div id="tabs" class="row" role="tablist" style="margin-top:10px"></div>
+      <table>
+        <thead><tr><th>#</th><th>Player</th><th class="num">Score</th><th>Tier</th></tr></thead>
+        <tbody id="board-body"></tbody>
+      </table>
+      <p id="board-status" class="status" role="status"></p>
+    </section>
+  </main>
+
+  <footer>Top Down Looter &middot; Scores are submitted by the game for logged-in accounts. Names are first come, first served.</footer>
+
+  <script src="config.js"></script>
+  <script>
+    'use strict';
+    // The game reads the login session token from this same localStorage key (see PlayerKeyStore.cs). Change both together.
+    var SESSION_STORAGE_KEY = 'looter_session';
+    var LEGACY_STORAGE_KEY = 'looter_recovery_code';
+    var ACCOUNT_POLL_MILLISECONDS = 2000;
+    var BOARD_ROW_COUNT = 50;
+    var CATEGORIES = [
+      { key: 'deepestFloor', label: 'Deepest floor' },
+      { key: 'mostKills', label: 'Most kills' },
+      { key: 'mostElitesKilled', label: 'Elites killed' },
+      { key: 'mostGoldExtracted', label: 'Gold extracted' },
+      { key: 'highestDifficulty', label: 'Highest difficulty' }
+    ];
+
+    var config = window.LOOTER_CONFIG || {};
+    var currentCategory = CATEGORIES[0].key;
+    var requestCounter = 0;
+
+    function byId(id) { return document.getElementById(id); }
+
+    function readStorage() {
+      try { return window.localStorage.getItem(SESSION_STORAGE_KEY) || ''; } catch (error) { return ''; }
+    }
+    function writeStorage(value) {
+      try { window.localStorage.setItem(SESSION_STORAGE_KEY, value); return true; } catch (error) { return false; }
+    }
+    function clearStorage() {
+      try { window.localStorage.removeItem(SESSION_STORAGE_KEY); } catch (error) { /* storage blocked: nothing to clear */ }
+    }
+    try { window.localStorage.removeItem(LEGACY_STORAGE_KEY); } catch (error) { /* storage blocked */ }
+
+    // Calls a Supabase SQL function. Rejects with Error(message): the database's short code
+    // (e.g. "invalid_key") for server errors, or "network" when the server cannot be reached.
+    function callRpc(functionName, body) {
+      if (!config.supabaseUrl || !config.supabaseKey) { return Promise.reject(new Error('not_configured')); }
+      var headers = { 'Content-Type': 'application/json', 'apikey': config.supabaseKey };
+      if (config.supabaseKey.indexOf('eyJ') === 0) { headers['Authorization'] = 'Bearer ' + config.supabaseKey; }
+      return fetch(config.supabaseUrl.replace(/\/+$/, '') + '/rest/v1/rpc/' + functionName, {
+        method: 'POST', headers: headers, body: JSON.stringify(body)
+      }).then(function (response) {
+        return response.json().then(function (data) {
+          if (!response.ok) { throw new Error((data && data.message) || 'http_' + response.status); }
+          return data;
+        });
+      }, function () { throw new Error('network'); });
+    }
+
+    // ---------- Account panel (name + password) ----------
+    // The password is only ever sent to the server in the login/register/change calls and is never stored here.
+    // What the browser keeps is a random session token; the game uses the same token for scores and cloud saves.
+    var ERROR_TEXT = {
+      invalid_login: 'Wrong name or password.',
+      invalid_name: 'Names need 3-16 letters, numbers, spaces, - or _.',
+      invalid_password: 'Passwords need 8-72 characters.',
+      name_taken: 'That name is already taken. Pick another, or log in if it is yours.',
+      rate_limited: 'Too many accounts created from this connection. Try again later.',
+      too_many_attempts: 'Too many failed attempts. Wait 15 minutes and try again.',
+      invalid_key: 'Your login expired. Please log in again.',
+      network: 'Could not reach the server. Try again in a moment.',
+      not_configured: 'Accounts are not connected yet.'
+    };
+    var shownToken = null;
+    var myPlayerId = null;
+
+    function setAccountStatus(text, kind) {
+      var status = byId('account-status');
+      status.className = 'status' + (kind ? ' ' + kind : '');
+      status.textContent = text || '';
+    }
+    function describeError(error) {
+      var message = error && error.message;
+      return ERROR_TEXT[message] || 'Something went wrong (' + message + ').';
+    }
+    function reloadGame() {
+      byId('game-frame').src = byId('game-frame').src;
+    }
+    function showLoggedOut() {
+      myPlayerId = null;
+      byId('account-out').hidden = false;
+      byId('account-in').hidden = true;
+    }
+    function showLoggedIn(account) {
+      myPlayerId = account.playerId;
+      byId('account-display-name').textContent = account.displayName;   // textContent: names are never HTML
+      byId('account-out').hidden = true;
+      byId('account-in').hidden = false;
+    }
+
+    // Looks up who the stored token belongs to. Runs when the token changes (login here, logout, or the game
+    // clearing an expired token), checked by the poll below.
+    function refreshAccountPanel() {
+      var token = readStorage();
+      if (token === shownToken) { return; }
+      shownToken = token;
+      if (!token) {
+        showLoggedOut();
+        loadBoard();
+        return;
+      }
+      callRpc('get_account', { p_player_key: token }).then(function (account) {
+        showLoggedIn(account);
+        loadBoard();
+      }).catch(function (error) {
+        if (error && error.message === 'invalid_key') {
+          clearStorage();
+          shownToken = '';
+          showLoggedOut();
+          setAccountStatus(describeError(error), 'bad');
+        }
+        // A network error keeps the token: the game may still be fine, and the next page load retries.
+      });
+    }
+    setInterval(refreshAccountPanel, ACCOUNT_POLL_MILLISECONDS);
+
+    // Calls login or register_account, stores the token and restarts the game so it picks the account up.
+    function signIn(functionName, doneMessage) {
+      var nameInput = byId('account-name');
+      var passwordInput = byId('account-password');
+      var body = { p_display_name: nameInput.value.trim(), p_password: passwordInput.value };
+      setAccountStatus('Working...', '');
+      callRpc(functionName, body).then(function (result) {
+        if (result && result.error) { throw new Error(result.error); }
+        if (!result || !result.token) { throw new Error('network'); }
+        if (!writeStorage(result.token)) {
+          setAccountStatus('This browser blocked storage, so the login cannot be kept.', 'bad');
+          return;
+        }
+        passwordInput.value = '';
+        shownToken = result.token;
+        showLoggedIn(result);
+        setAccountStatus(doneMessage, 'good');
+        reloadGame();
+        loadBoard();
+      }).catch(function (error) {
+        setAccountStatus(describeError(error), 'bad');
+      });
+    }
+
+    byId('account-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      signIn('login', 'Logged in. The game reloads with your account.');
+    });
+    byId('register-button').addEventListener('click', function () {
+      signIn('register_account', 'Account created. The game reloads with your account.');
+    });
+
+    byId('logout-button').addEventListener('click', function () {
+      var token = readStorage();
+      clearStorage();
+      shownToken = '';
+      showLoggedOut();
+      setAccountStatus('Logged out.', '');
+      if (token) { callRpc('logout', { p_player_key: token }).catch(function () { /* the token is already forgotten here */ }); }
+      reloadGame();
+      loadBoard();
+    });
+
+    byId('password-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      var token = readStorage();
+      var body = { p_player_key: token, p_old_password: byId('old-password').value, p_new_password: byId('new-password').value };
+      setAccountStatus('Working...', '');
+      callRpc('change_password', body).then(function (result) {
+        if (result && result.error) { throw new Error(result.error); }
+        byId('old-password').value = '';
+        byId('new-password').value = '';
+        setAccountStatus('Password changed. Your other devices were logged out.', 'good');
+      }).catch(function (error) {
+        setAccountStatus(describeError(error), 'bad');
+      });
+    });
+
+    // Size the game frame in whole, multiple-of-8 pixels. A fractional CSS size makes the browser
+    // resample the canvas, which is what makes text look fuzzy. (CSS aspect-ratio stays as the fallback.)
+    var FRAME_RESERVED_HEIGHT = 150;
+    var FRAME_SNAP_PIXELS = 16;   // 16 keeps width * 9 / 16 a whole number too
+    function sizeGameFrame() {
+      var frame = byId('game-frame');
+      if (document.fullscreenElement) { return; }
+      var availableWidth = frame.parentElement.clientWidth - 32;
+      var availableHeight = window.innerHeight - FRAME_RESERVED_HEIGHT;
+      var width = Math.min(availableWidth, availableHeight * 16 / 9);
+      width = Math.max(FRAME_SNAP_PIXELS * 20, Math.floor(width / FRAME_SNAP_PIXELS) * FRAME_SNAP_PIXELS);
+      frame.style.width = width + 'px';
+      frame.style.height = Math.round(width * 9 / 16) + 'px';
+    }
+    window.addEventListener('resize', sizeGameFrame);
+    sizeGameFrame();
+
+    byId('fullscreen-button').addEventListener('click', function () {
+      var frame = byId('game-frame');
+      if (frame.requestFullscreen) { frame.requestFullscreen(); }
+    });
+
+    // Browsers only report a controller to the frame that has focus, and a controller is only "seen" after
+    // its first button press while that frame is focused. Hand focus to the game frame on load, when the
+    // pointer enters it, and when a controller connects, so pressing a button just works.
+    function focusGameFrame() {
+      var frame = byId('game-frame');
+      try { frame.focus(); if (frame.contentWindow) { frame.contentWindow.focus(); } } catch (focusError) { }
+    }
+    byId('game-frame').addEventListener('load', focusGameFrame);
+    byId('game-frame').addEventListener('mouseenter', focusGameFrame);
+    window.addEventListener('gamepadconnected', focusGameFrame);
+
+    // ---------- Leaderboard ----------
+    function buildTabs() {
+      var tabs = byId('tabs');
+      CATEGORIES.forEach(function (category) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'tab';
+        button.setAttribute('role', 'tab');
+        button.setAttribute('aria-selected', String(category.key === currentCategory));
+        button.textContent = category.label;
+        button.addEventListener('click', function () {
+          currentCategory = category.key;
+          Array.prototype.forEach.call(tabs.children, function (child) { child.setAttribute('aria-selected', 'false'); });
+          button.setAttribute('aria-selected', 'true');
+          loadBoard();
+        });
+        tabs.appendChild(button);
+      });
+    }
+
+    function setBoardStatus(text, isBad) {
+      var status = byId('board-status');
+      status.textContent = text;
+      status.className = isBad ? 'status bad' : 'status';
+    }
+
+    function renderRows(entries, myPlayerId) {
+      var body = byId('board-body');
+      body.textContent = '';
+      entries.forEach(function (entry) {
+        var row = document.createElement('tr');
+        if (entry.playerId === myPlayerId) { row.className = 'me'; }
+        [entry.rank, entry.displayName, entry.value, entry.difficultyTier].forEach(function (cellValue, cellIndex) {
+          var cell = document.createElement('td');
+          if (cellIndex === 2) { cell.className = 'num'; }
+          cell.textContent = cellValue;   // textContent: player names are never treated as HTML
+          row.appendChild(cell);
+        });
+        body.appendChild(row);
+      });
+    }
+
+    function loadBoard() {
+      if (!config.supabaseUrl || !config.supabaseKey) {
+        setBoardStatus('Leaderboard is not connected yet.', true);
+        return;
+      }
+      requestCounter += 1;
+      var thisRequest = requestCounter;
+      setBoardStatus('Loading...', false);
+      var headers = { 'Content-Type': 'application/json', 'apikey': config.supabaseKey };
+      if (config.supabaseKey.indexOf('eyJ') === 0) { headers['Authorization'] = 'Bearer ' + config.supabaseKey; }
+      fetch(config.supabaseUrl.replace(/\/+$/, '') + '/rest/v1/rpc/get_leaderboard', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ p_category: currentCategory, p_limit: BOARD_ROW_COUNT, p_mode: byId('mode-select').value })
+      }).then(function (response) {
+        if (!response.ok) { throw new Error('HTTP ' + response.status); }
+        return response.json();
+      }).then(function (reply) {
+        if (thisRequest !== requestCounter) { return; }
+        var entries = (reply && reply.entries) || [];
+        renderRows(entries, myPlayerId);
+        setBoardStatus(entries.length ? '' : 'No scores yet. Be the first.', false);
+      }).catch(function () {
+        if (thisRequest !== requestCounter) { return; }
+        setBoardStatus('Could not load the leaderboard. Try again in a moment.', true);
+      });
+    }
+
+    byId('mode-select').addEventListener('change', loadBoard);
+    buildTabs();
+    refreshAccountPanel();
+    loadBoard();
+  </script>
+</body>
+</html>

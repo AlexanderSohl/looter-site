@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fish Online</title>
+  <meta name="description" content="Cast, hook and reel in dozens of fish species in your browser. Log in to post your biggest catches to the leaderboard.">
+  <style>
+    :root {
+      --bg: #0f1820; --panel: #15222d; --panel-2: #1c2e3c; --line: #2a4152;
+      --fg: #e8f1f6; --muted: #8fa7b6; --accent: #f2b632; --good: #6fd08c; --bad: #ff7a7a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    header, main, footer { width: min(1100px, 100% - 32px); margin-inline: auto; }
+    header { padding: 24px 0 8px; }
+    h1 { margin: 0; font-size: 1.9rem; letter-spacing: .5px; }
+    .tagline { margin: 4px 0 0; color: var(--muted); }
+    a { color: var(--accent); }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; }
+    .game-frame { width: min(100%, (100vh - 150px) * 16 / 9); aspect-ratio: 16 / 9; margin-inline: auto; display: block; border: 1px solid var(--line); border-radius: 8px; background: #000; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .spread { justify-content: space-between; }
+    button, input { font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #1a1205; font-weight: 600; }
+    input { min-width: 0; flex: 1 1 180px; }
+    button.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #1a1205; font-weight: 600; }
+    h2 { margin: 0 0 8px; font-size: 1.15rem; }
+    p.note { margin: 6px 0 0; color: var(--muted); font-size: .9rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; font-size: .85rem; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tr.me td { background: rgba(242, 182, 50, .15); }
+    .status { margin-top: 10px; color: var(--muted); }
+    .status.bad { color: var(--bad); }
+    .status.good { color: var(--good); }
+    footer { padding: 24px 0 40px; color: var(--muted); font-size: .85rem; }
+    @media (max-width: 700px) { header, main, footer { width: calc(100% - 16px); } .card { padding: 8px; } }
+    @media (max-width: 600px) { h1 { font-size: 1.5rem; } th:nth-child(4), td:nth-child(4) { display: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Fish Online</h1>
+    <p class="tagline"><a href="../">&larr; All games</a> &middot; Cast, hook and reel. How big can you catch? &middot; <a href="../looter.html">Top Down Looter</a></p>
+  </header>
+
+  <main>
+    <section class="card" aria-label="Game">
+      <iframe id="game-frame" class="game-frame" src="play/index.html" title="Fish Online" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
+      <div class="row spread" style="margin-top:10px">
+        <span class="note" style="margin:0">You can play without an account. Log in below to post your catches to the leaderboard.</span>
+        <button id="fullscreen-button" type="button">Fullscreen</button>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Account">
+      <h2>Your account</h2>
+      <div id="account-out">
+        <p class="note" style="margin-top:0">Optional. One account works for every game on this site, including Top Down Looter.</p>
+        <form id="account-form" class="row" style="margin-top:10px">
+          <input id="account-name" type="text" maxlength="16" placeholder="Name" aria-label="Account name" autocomplete="username" autocapitalize="off" spellcheck="false">
+          <input id="account-password" type="password" maxlength="72" placeholder="Password" aria-label="Password" autocomplete="current-password">
+          <button class="primary" type="submit">Log in</button>
+          <button id="register-button" type="button">Create account</button>
+        </form>
+        <p class="note">Names are 3-16 letters, numbers, spaces, - or _. Passwords are 8-72 characters. There is no password recovery yet, so pick one you will remember.</p>
+      </div>
+      <div id="account-in" hidden>
+        <div class="row spread">
+          <span>Fishing as <strong id="account-display-name"></strong>. Your catches are posted automatically.</span>
+          <button id="logout-button" type="button">Log out</button>
+        </div>
+        <details style="margin-top:10px">
+          <summary>Change password</summary>
+          <form id="password-form" class="row" style="margin-top:8px">
+            <input id="old-password" type="password" maxlength="72" placeholder="Current password" aria-label="Current password" autocomplete="current-password">
+            <input id="new-password" type="password" maxlength="72" placeholder="New password (8+ characters)" aria-label="New password" autocomplete="new-password">
+            <button type="submit">Change</button>
+          </form>
+          <p class="note">Changing your password logs out your other devices.</p>
+        </details>
+      </div>
+      <p id="account-status" class="status" role="status"></p>
+    </section>
+
+    <section class="card" aria-label="Leaderboard">
+      <h2>Leaderboard</h2>
+      <div id="tabs" class="row" role="tablist"></div>
+      <table>
+        <thead><tr><th>#</th><th>Player</th><th class="num">Score</th><th>Detail</th></tr></thead>
+        <tbody id="board-body"></tbody>
+      </table>
+      <p id="board-status" class="status" role="status"></p>
+    </section>
+  </main>
+
+  <footer>Fish Online &middot; Uses the same accounts as Top Down Looter. Catches are posted by the game for logged-in accounts.</footer>
+
+  <script src="../config.js"></script>
+  <script>
+    'use strict';
+    // Same key the main page writes and the game reads (FishOnlineService.cs).
+    var SESSION_STORAGE_KEY = 'looter_session';
+    var BOARD_ROW_COUNT = 50;
+    var SPECIES_TOTAL = 26;
+    var CATEGORIES = [
+      { key: 'biggest', label: 'Biggest fish' },
+      { key: 'total', label: 'Total weight' },
+      { key: 'species', label: 'Species found' },
+      { key: 'level', label: 'Fisher level' }
+    ];
+    var config = window.LOOTER_CONFIG || {};
+    var currentCategory = CATEGORIES[0].key;
+    var requestCounter = 0;
+    var myPlayerId = '';
+
+    function byId(id) { return document.getElementById(id); }
+
+    function callRpc(name, body) {
+      if (!config.supabaseUrl || !config.supabaseKey) { return Promise.reject(new Error('not_configured')); }
+      var headers = { 'Content-Type': 'application/json', 'apikey': config.supabaseKey };
+      if (config.supabaseKey.indexOf('eyJ') === 0) { headers['Authorization'] = 'Bearer ' + config.supabaseKey; }
+      return fetch(config.supabaseUrl.replace(/\/+$/, '') + '/rest/v1/rpc/' + name, {
+        method: 'POST', headers: headers, body: JSON.stringify(body)
+      }).then(function (response) {
+        return response.json().then(function (data) {
+          if (!response.ok) { throw new Error((data && (data.message || data.error)) || ('http_' + response.status)); }
+          return data;
+        });
+      }, function () { throw new Error('network'); });
+    }
+
+    function formatKg(kg) {
+      kg = Number(kg) || 0;
+      if (kg < 1) { return Math.round(kg * 1000) + ' g'; }
+      return kg.toFixed(kg < 100 ? 2 : 1) + ' kg';
+    }
+
+    // ---------- Account panel (same accounts and token as the main page and Top Down Looter) ----------
+    var ACCOUNT_POLL_MILLISECONDS = 2000;
+    var ERROR_TEXT = {
+      invalid_login: 'Wrong name or password.',
+      invalid_name: 'Names need 3-16 letters, numbers, spaces, - or _.',
+      invalid_password: 'Passwords need 8-72 characters.',
+      name_taken: 'That name is already taken. Pick another, or log in if it is yours.',
+      rate_limited: 'Too many accounts created from this connection. Try again later.',
+      too_many_attempts: 'Too many failed attempts. Wait 15 minutes and try again.',
+      invalid_key: 'Your login expired. Please log in again.',
+      network: 'Could not reach the server. Try again in a moment.',
+      not_configured: 'Accounts are not connected yet.'
+    };
+    var shownToken = null;
+
+    function readStorage() { try { return window.localStorage.getItem(SESSION_STORAGE_KEY) || ''; } catch (e) { return ''; } }
+    function writeStorage(value) { try { window.localStorage.setItem(SESSION_STORAGE_KEY, value); return true; } catch (e) { return false; } }
+    function clearStorage() { try { window.localStorage.removeItem(SESSION_STORAGE_KEY); } catch (e) { /* storage blocked */ } }
+
+    function setAccountStatus(text, kind) {
+      var status = byId('account-status');
+      status.className = 'status' + (kind ? ' ' + kind : '');
+      status.textContent = text || '';
+    }
+    function describeError(error) {
+      var message = error && error.message;
+      return ERROR_TEXT[message] || 'Something went wrong (' + message + ').';
+    }
+    function reloadGame() { byId('game-frame').src = byId('game-frame').src; }
+    function showLoggedOut() {
+      myPlayerId = '';
+      byId('account-out').hidden = false;
+      byId('account-in').hidden = true;
+    }
+    function showLoggedIn(account) {
+      myPlayerId = account.playerId || '';
+      byId('account-display-name').textContent = account.displayName || 'you';   // textContent: names are never HTML
+      byId('account-out').hidden = true;
+      byId('account-in').hidden = false;
+    }
+
+    // Runs when the stored token changes (login/logout here or on another page, or the game clearing an expired token).
+    function refreshAccount() {
+      var token = readStorage();
+      if (token === shownToken) { return; }
+      shownToken = token;
+      if (!token) { showLoggedOut(); loadBoard(); return; }
+      callRpc('get_account', { p_player_key: token }).then(function (account) {
+        showLoggedIn(account);
+        loadBoard();
+      }).catch(function (error) {
+        if (error && error.message === 'invalid_key') {
+          clearStorage();
+          shownToken = '';
+          showLoggedOut();
+          setAccountStatus(describeError(error), 'bad');
+        }
+        // A network error keeps the token; the next page load retries.
+        loadBoard();
+      });
+    }
+    setInterval(refreshAccount, ACCOUNT_POLL_MILLISECONDS);
+
+    function signIn(functionName, doneMessage) {
+      var passwordInput = byId('account-password');
+      var body = { p_display_name: byId('account-name').value.trim(), p_password: passwordInput.value };
+      setAccountStatus('Working...', '');
+      callRpc(functionName, body).then(function (result) {
+        if (result && result.error) { throw new Error(result.error); }
+        if (!result || !result.token) { throw new Error('network'); }
+        if (!writeStorage(result.token)) {
+          setAccountStatus('This browser blocked storage, so the login cannot be kept.', 'bad');
+          return;
+        }
+        passwordInput.value = '';
+        shownToken = result.token;
+        showLoggedIn(result);
+        setAccountStatus(doneMessage, 'good');
+        reloadGame();
+        loadBoard();
+      }).catch(function (error) { setAccountStatus(describeError(error), 'bad'); });
+    }
+    byId('account-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      signIn('login', 'Logged in. The game reloads with your account.');
+    });
+    byId('register-button').addEventListener('click', function () {
+      signIn('register_account', 'Account created. The game reloads with your account.');
+    });
+    byId('logout-button').addEventListener('click', function () {
+      var token = readStorage();
+      clearStorage();
+      shownToken = '';
+      showLoggedOut();
+      setAccountStatus('Logged out.', '');
+      if (token) { callRpc('logout', { p_player_key: token }).catch(function () { /* already forgotten here */ }); }
+      reloadGame();
+      loadBoard();
+    });
+    byId('password-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      var body = { p_player_key: readStorage(), p_old_password: byId('old-password').value, p_new_password: byId('new-password').value };
+      setAccountStatus('Working...', '');
+      callRpc('change_password', body).then(function (result) {
+        if (result && result.error) { throw new Error(result.error); }
+        byId('old-password').value = '';
+        byId('new-password').value = '';
+        setAccountStatus('Password changed. Your other devices were logged out.', 'good');
+      }).catch(function (error) { setAccountStatus(describeError(error), 'bad'); });
+    });
+
+    function buildTabs() {
+      var tabs = byId('tabs');
+      CATEGORIES.forEach(function (category) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'tab';
+        button.setAttribute('role', 'tab');
+        button.setAttribute('aria-selected', String(category.key === currentCategory));
+        button.textContent = category.label;
+        button.addEventListener('click', function () {
+          currentCategory = category.key;
+          Array.prototype.forEach.call(tabs.children, function (child) { child.setAttribute('aria-selected', 'false'); });
+          button.setAttribute('aria-selected', 'true');
+          loadBoard();
+        });
+        tabs.appendChild(button);
+      });
+    }
+
+    function renderRows(entries) {
+      var body = byId('board-body');
+      body.textContent = '';
+      entries.forEach(function (entry) {
+        var row = document.createElement('tr');
+        if (myPlayerId && entry.playerId === myPlayerId) { row.className = 'me'; }
+        var value = currentCategory === 'species' ? entry.value + ' / ' + SPECIES_TOTAL : currentCategory === 'level' ? 'Lv ' + entry.value : formatKg(entry.value);
+        [entry.rank, entry.displayName, value, entry.detail || ''].forEach(function (text, index) {
+          var cell = document.createElement('td');
+          if (index === 2) { cell.className = 'num'; }
+          cell.textContent = text;
+          row.appendChild(cell);
+        });
+        body.appendChild(row);
+      });
+    }
+
+    function loadBoard() {
+      var status = byId('board-status');
+      status.className = 'status';
+      status.textContent = 'Loading...';
+      var request = ++requestCounter;
+      callRpc('get_fish_leaderboard', { p_category: currentCategory, p_limit: BOARD_ROW_COUNT }).then(function (reply) {
+        if (request !== requestCounter) { return; }
+        var entries = (reply && reply.entries) || [];
+        renderRows(entries);
+        status.textContent = entries.length ? '' : 'No catches posted yet. Be the first!';
+      }).catch(function () {
+        if (request !== requestCounter) { return; }
+        renderRows([]);
+        status.className = 'status bad';
+        status.textContent = 'Could not load the leaderboard right now.';
+      });
+    }
+
+    var FRAME_RESERVED_HEIGHT = 150;
+    var FRAME_SNAP_PIXELS = 16;
+    function sizeGameFrame() {
+      var frame = byId('game-frame');
+      if (document.fullscreenElement) { return; }
+      // Phones and narrow windows: a tall frame that fills most of the screen (the game adapts to any shape).
+      if (window.innerWidth <= 700 || window.innerHeight > window.innerWidth) {
+        frame.style.width = '100%';
+        frame.style.height = Math.max(420, Math.round(window.innerHeight - 120)) + 'px';
+        return;
+      }
+      var availableWidth = frame.parentElement.clientWidth - 32;
+      var availableHeight = window.innerHeight - FRAME_RESERVED_HEIGHT;
+      var width = Math.min(availableWidth, availableHeight * 16 / 9);
+      width = Math.max(FRAME_SNAP_PIXELS * 20, Math.floor(width / FRAME_SNAP_PIXELS) * FRAME_SNAP_PIXELS);
+      frame.style.width = width + 'px';
+      frame.style.height = Math.round(width * 9 / 16) + 'px';
+    }
+    window.addEventListener('resize', sizeGameFrame);
+    sizeGameFrame();
+
+    byId('fullscreen-button').addEventListener('click', function () {
+      var frame = byId('game-frame');
+      if (frame.requestFullscreen) { frame.requestFullscreen(); }
+    });
+
+    function focusGameFrame() {
+      var frame = byId('game-frame');
+      try { frame.focus(); if (frame.contentWindow) { frame.contentWindow.focus(); } } catch (focusError) { }
+    }
+    byId('game-frame').addEventListener('load', focusGameFrame);
+    byId('game-frame').addEventListener('mouseenter', focusGameFrame);
+    window.addEventListener('gamepadconnected', focusGameFrame);
+
+    buildTabs();
+    refreshAccount();
+    setInterval(loadBoard, 30000);
+  </script>
+</body>
+</html>
